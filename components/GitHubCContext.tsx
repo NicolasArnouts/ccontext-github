@@ -1,30 +1,52 @@
 "use client"
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import axios from 'axios'
-import FileTree from './FileTree'
-import { debounce } from '@/lib/helpers'
+import { debounce } from '@/lib/helpers-client'
 
 const GitHubCContext = () => {
   const [githubUrl, setGithubUrl] = useState('')
   const [ccontextCommand, setCcontextCommand] = useState('ccontext -gm')
   const [output, setOutput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [envId, setEnvId] = useState<string | null>(null)
   const { toast } = useToast()
 
   const debouncedSetGithubUrl = useCallback(
-    debounce((value: string) => setGithubUrl(value), 300),
+    debounce((value: string) => setGithubUrl(value), 100),
     []
   )
 
   const debouncedSetCcontextCommand = useCallback(
-    debounce((value: string) => setCcontextCommand(value), 300),
+    debounce((value: string) => setCcontextCommand(value), 100),
     []
   )
+
+  useEffect(() => {
+    // Check environment status every minute
+    const intervalId = setInterval(async () => {
+      if (envId) {
+        try {
+          const response = await axios.get(`/api/environment-status?envId=${envId}`);
+          if (response.data.isActive) {
+            toast({
+              title: "Environment Active",
+              description: `Environment ${envId} is still active.`,
+            });
+          }
+        } catch (error) {
+          console.error('Error checking environment status:', error);
+          setEnvId(null);
+        }
+      }
+    }, 60000);
+
+    return () => clearInterval(intervalId);
+  }, [envId, toast]);
 
   const handleCloneAndRun = async () => {
     try {
@@ -33,8 +55,10 @@ const GitHubCContext = () => {
       const response = await axios.post('/api/clone-and-run', {
         githubUrl,
         ccontextCommand,
+        envId
       })
       setOutput(response.data.output || response.data.error)
+      setEnvId(response.data.envId)
       toast({
         title: "Success",
         description: "Command executed successfully.",
@@ -66,6 +90,7 @@ const GitHubCContext = () => {
         placeholder="Enter GitHub URL"
         defaultValue={githubUrl}
         onChange={(e) => debouncedSetGithubUrl(e.target.value)}
+        disabled={!!envId}
       />
       <Input
         placeholder="CContext command"
@@ -74,22 +99,27 @@ const GitHubCContext = () => {
       />
 
       <Button onClick={handleCloneAndRun} className='flex w-full' disabled={isLoading}>
-        {isLoading ? 'Processing...' : 'Clone and Run CContext'}
+        {isLoading ? 'Processing...' : (envId ? 'Run Command' : 'Clone and Run CContext')}
       </Button>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="w-full">
         <div>
           <h3 className="text-lg font-semibold mb-2">Command Output:</h3>
           <Textarea
             placeholder="Output will appear here..."
             value={output}
             readOnly
-            className="h-64 font-mono text-sm mb-2"
+            className="h-64 font-mono text-sm mb-2 w-full"
           />
           {output && (
             <Button onClick={() => handleCopyToClipboard(output)} className='flex w-full mb-4'>Copy Output to Clipboard</Button>
           )}
         </div>
       </div>
+      {envId && (
+        <div>
+          <p>Active Environment ID: {envId}</p>
+        </div>
+      )}
     </div>
   )
 }

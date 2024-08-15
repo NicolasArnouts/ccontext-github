@@ -12,27 +12,33 @@ datasource db {
 }
 
 model Repository {
-  id            String   @id @default(uuid())
-  name          String
-  url           String
-  userId        String
-  latestVersion String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  slug String @id @unique
+
+  name String?
+  url  String
+
+  userId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   runs Run[]
 
   @@index([userId])
+  @@index([slug]) // Add an index on the slug field for faster lookups
 }
 
 model Run {
-  id           String   @id @default(uuid())
-  repositoryId String
-  output       String   @db.Text
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id String @id @default(uuid())
 
-  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  repositoryId String
+
+  output String @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  repository Repository @relation(fields: [repositoryId], references: [slug], onDelete: Cascade)
 
   @@index([repositoryId])
 }
