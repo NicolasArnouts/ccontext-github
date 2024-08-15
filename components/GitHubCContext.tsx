@@ -13,8 +13,7 @@ const GitHubCContext = () => {
   const [githubUrl, setGithubUrl] = useState('')
   const [ccontextCommand, setCcontextCommand] = useState('ccontext -gm')
   const [output, setOutput] = useState('')
-  const [clipboardContent, setClipboardContent] = useState('')
-  const [fileTree, setFileTree] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
   const debouncedSetGithubUrl = useCallback(
@@ -29,16 +28,17 @@ const GitHubCContext = () => {
 
   const handleCloneAndRun = async () => {
     try {
+      setIsLoading(true)
       setOutput('Processing...')
-      setClipboardContent('')
-      setFileTree(null)
       const response = await axios.post('/api/clone-and-run', {
         githubUrl,
         ccontextCommand,
       })
       setOutput(response.data.output || response.data.error)
-      setClipboardContent(response.data.clipboardContent || '')
-      setFileTree(response.data.fileTree || null)
+      toast({
+        title: "Success",
+        description: "Command executed successfully.",
+      })
     } catch (error) {
       console.error('Error:', error)
       toast({
@@ -47,6 +47,8 @@ const GitHubCContext = () => {
         variant: "destructive",
       })
       setOutput("An error occurred while processing your request.")
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -71,7 +73,9 @@ const GitHubCContext = () => {
         onChange={(e) => debouncedSetCcontextCommand(e.target.value)}
       />
 
-      <Button onClick={handleCloneAndRun} className='flex w-full'>Clone and Run CContext</Button>
+      <Button onClick={handleCloneAndRun} className='flex w-full' disabled={isLoading}>
+        {isLoading ? 'Processing...' : 'Clone and Run CContext'}
+      </Button>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <h3 className="text-lg font-semibold mb-2">Command Output:</h3>
@@ -85,12 +89,6 @@ const GitHubCContext = () => {
             <Button onClick={() => handleCopyToClipboard(output)} className='flex w-full mb-4'>Copy Output to Clipboard</Button>
           )}
         </div>
-
-        {fileTree && (
-          <div>
-            <FileTree tree={fileTree} />
-          </div>
-        )}
       </div>
     </div>
   )

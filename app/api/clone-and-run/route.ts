@@ -1,24 +1,12 @@
 import { NextResponse } from 'next/server'
-import crypto from 'crypto'
 import path from 'path'
-import fs from 'fs'
-import os from 'os'
 import { rateLimit } from '@/lib/rate-limit'
 import prismadb from '@/lib/prismadb'
 import { auth } from "@clerk/nextjs/server";
 import { sanitizeInput, validateGitHubUrl } from '@/lib/helpers'
-import { execSync } from 'child_process'
+import { TempEnvManager } from '@/lib/temp-env-manager'
 
-const MAX_EXECUTION_TIME = 5 * 60 * 1000; // 5 minutes
-
-async function executeCommand(command: string, args: string[], cwd: string): Promise<{ stdout: string; stderr: string }> {
-  try {
-    const result = execSync(`${command} ${args.join(' ')}`, { cwd, encoding: 'utf8' });
-    return { stdout: result, stderr: '' };
-  } catch (error) {
-    return { stdout: '', stderr: error.message };
-  }
-}
+const tempEnvManager = new TempEnvManager();
 
 export async function POST(req: Request) {
   try {
@@ -41,21 +29,15 @@ export async function POST(req: Request) {
     }
     const sanitizedCommand = sanitizeInput(ccontextCommand)
 
-    // Create a temporary directory
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'github-ccontext-'));
-
     try {
-      // Clone the repository
-      await executeCommand('git', ['clone', githubUrl, tempDir], process.cwd());
+      // Create a temporary environment
+      const envId = await tempEnvManager.createEnvironment(githubUrl);
 
       // Run ccontext command
-      const { stdout, stderr } = await executeCommand('sh', ['-c', `${sanitizedCommand} -gm`], tempDir);
-
-      // Read the generated markdown file
-      const mdContent = fs.readFileSync(path.join(tempDir, 'ccontext-output.md'), 'utf8');
+      const { stdout, stderr } = await tempEnvManager.runCommand(envId, sanitizedCommand);
 
       // Get the latest version tag or commit hash
-      const { stdout: versionInfo } = await executeCommand('git', ['describe', '--tags', '--always'], tempDir);
+      const { stdout: versionInfo } = await tempEnvManager.runCommand(envId, 'git describe --tags --always');
       const latestVersion = versionInfo.trim();
 
       // Store the repository and run information in the database
@@ -71,14 +53,14 @@ export async function POST(req: Request) {
       await prismadb.run.create({
         data: {
           repositoryId: repository.id,
-          output: mdContent,
+          output: stdout,
         }
       });
 
-      return NextResponse.json({ output: stdout, error: stderr, mdContent })
+      return NextResponse.json({ output: stdout, error: stderr })
     } finally {
-      // Clean up: remove the temp folder
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      // Clean up expired environments
+      await tempEnvManager.cleanupExpiredEnvironments();
     }
   } catch (error) {
     console.error('Error:', error)
