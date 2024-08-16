@@ -1,40 +1,42 @@
-"use client"
+"use client";
 
-import React, { useState, useCallback, useEffect } from 'react'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/components/ui/use-toast"
-import axios from 'axios'
-import { debounce } from '@/lib/helpers-client'
-import FileTree from '@/components/FileTree'
+import React, { useState, useCallback, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
+import axios from "axios";
+import { debounce } from "@/lib/helpers-client";
+import FileTree from "@/components/FileTree";
 
 const GitHubCContext = () => {
-  const [githubUrl, setGithubUrl] = useState('')
-  const [ccontextCommand, setCcontextCommand] = useState('ccontext -gm')
-  const [output, setOutput] = useState('')
-  const [markdownContent, setMarkdownContent] = useState<string | null>(null)
-  const [pdfExists, setPdfExists] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [envId, setEnvId] = useState<string | null>(null)
-  const { toast } = useToast()
+  const [githubUrl, setGithubUrl] = useState("");
+  const [ccontextCommand, setCcontextCommand] = useState("ccontext -gm");
+  const [output, setOutput] = useState("");
+  const [markdownContent, setMarkdownContent] = useState<string | null>(null);
+  const [pdfExists, setPdfExists] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [envId, setEnvId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const debouncedSetGithubUrl = useCallback(
     debounce((value: string) => setGithubUrl(value), 100),
     []
-  )
+  );
 
   const debouncedSetCcontextCommand = useCallback(
     debounce((value: string) => setCcontextCommand(value), 100),
     []
-  )
+  );
 
   useEffect(() => {
     // Check environment status every minute
     const intervalId = setInterval(async () => {
       if (envId) {
         try {
-          const response = await axios.get(`/api/environment-status?envId=${envId}`);
+          const response = await axios.get(
+            `/api/environment-status?envId=${envId}`
+          );
           if (response.data.isActive) {
             toast({
               title: "Environment Active",
@@ -42,7 +44,7 @@ const GitHubCContext = () => {
             });
           }
         } catch (error) {
-          console.error('Error checking environment status:', error);
+          console.error("Error checking environment status:", error);
           setEnvId(null);
         }
       }
@@ -53,52 +55,52 @@ const GitHubCContext = () => {
 
   const handleCloneAndRun = async () => {
     try {
-      setIsLoading(true)
-      setOutput('Processing...')
-      setMarkdownContent(null)
-      setPdfExists(false)
-      const response = await axios.post('/api/clone-and-run', {
+      setIsLoading(true);
+      setOutput("Processing...");
+      setMarkdownContent(null);
+      setPdfExists(false);
+      const response = await axios.post("/api/clone-and-run", {
         githubUrl,
         ccontextCommand,
-        envId
-      })
-      setOutput(response.data.output || response.data.error)
-      setMarkdownContent(response.data.markdownContent || null)
-      setPdfExists(response.data.pdfExists || false)
-      setEnvId(response.data.repositoryId)
+        envId,
+      });
+      setOutput(response.data.output || response.data.error);
+      setMarkdownContent(response.data.markdownContent || null);
+      setPdfExists(response.data.pdfExists || false);
+      setEnvId(response.data.repositoryId);
 
       toast({
         title: "Success",
         description: "Command executed successfully.",
-      })
+      });
     } catch (error) {
-      console.error('Error:', error)
+      console.error("Error:", error);
       toast({
         title: "Error",
         description: "An error occurred while processing your request.",
         variant: "destructive",
-      })
-      setOutput("An error occurred while processing your request.")
+      });
+      setOutput("An error occurred while processing your request.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleCopyToClipboard = (content: string) => {
-    navigator.clipboard.writeText(content)
+    navigator.clipboard.writeText(content);
     toast({
       title: "Copied!",
       description: "Content copied to clipboard.",
-    })
-  }
+    });
+  };
 
   const handleDownloadMarkdown = () => {
     if (markdownContent) {
-      const blob = new Blob([markdownContent], { type: 'text/markdown' });
+      const blob = new Blob([markdownContent], { type: "text/markdown" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = 'ccontext-output.md';
+      a.download = "ccontext-output.md";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -106,19 +108,19 @@ const GitHubCContext = () => {
       toast({
         title: "Downloaded!",
         description: "Markdown file has been downloaded.",
-      })
+      });
     }
-  }
+  };
 
   const handleDownloadPdf = () => {
     if (pdfExists && envId) {
-      window.open(`/api/download-pdf?envId=${envId}`, '_blank');
+      window.open(`/api/download-pdf?envId=${envId}`, "_blank");
       toast({
         title: "Downloaded!",
         description: "PDF file has been downloaded.",
-      })
+      });
     }
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -134,8 +136,16 @@ const GitHubCContext = () => {
         onChange={(e) => debouncedSetCcontextCommand(e.target.value)}
       />
 
-      <Button onClick={handleCloneAndRun} className='flex w-full' disabled={isLoading}>
-        {isLoading ? 'Processing...' : (envId ? 'Run Command' : 'Clone and Run CContext')}
+      <Button
+        onClick={handleCloneAndRun}
+        className="flex w-full"
+        disabled={isLoading}
+      >
+        {isLoading
+          ? "Processing..."
+          : envId
+          ? "Run Command"
+          : "Clone and Run CContext"}
       </Button>
       <div className="w-full">
         <div>
@@ -147,7 +157,12 @@ const GitHubCContext = () => {
             className="h-64 font-mono text-sm mb-2 w-full"
           />
           {output && (
-            <Button onClick={() => handleCopyToClipboard(output)} className='flex w-full mb-4'>Copy Output to Clipboard</Button>
+            <Button
+              onClick={() => handleCopyToClipboard(output)}
+              className="flex w-full mb-4"
+            >
+              Copy Output to Clipboard
+            </Button>
           )}
         </div>
       </div>
@@ -157,13 +172,17 @@ const GitHubCContext = () => {
           <h3 className="text-lg font-semibold mb-2">Generated Content:</h3>
           <div className="flex space-x-2 mb-4">
             {markdownContent && (
-              <Button onClick={handleDownloadMarkdown} className='flex-1'>Download Markdown</Button>
+              <Button onClick={handleDownloadMarkdown} className="flex-1">
+                Download Markdown
+              </Button>
             )}
             {pdfExists && (
-              <Button onClick={handleDownloadPdf} className='flex-1'>Download PDF</Button>
+              <Button onClick={handleDownloadPdf} className="flex-1">
+                Download PDF
+              </Button>
             )}
           </div>
-          {markdownContent && <FileTree markdownContent={markdownContent} />}
+          {/* {markdownContent && <FileTree markdownContent={markdownContent} />} */}
         </div>
       )}
       {envId && (
@@ -172,7 +191,7 @@ const GitHubCContext = () => {
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default GitHubCContext
+export default GitHubCContext;

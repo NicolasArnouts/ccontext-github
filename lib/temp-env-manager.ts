@@ -49,9 +49,7 @@ export class TempEnvManager {
   }
 
   async createOrUpdateRepository(repoUrl: string, userId: string) {
-    if (!validateGitHubUrl(repoUrl)) {
-      throw new Error("Invalid GitHub URL");
-    }
+    validateGitHubUrl(repoUrl);
 
     const slug = await generateRepoSlug(repoUrl);
     const userDir = this.getUserDir(userId);

@@ -17,7 +17,15 @@ export function sanitizeInput(input: string): string {
  */
 export function validateGitHubUrl(url: string): boolean {
   const githubUrlRegex = /^https:\/\/github\.com\/[\w-]+\/[\w-]+$/;
-  return githubUrlRegex.test(url);
+  const isgood = githubUrlRegex.test(url);
+
+  if (!isgood) {
+    throw new Error(
+      "Invalid GitHub URL. Please ensure it follows the format: https://github.com/username/repository"
+    );
+  }
+
+  return isgood;
 }
 
 /**

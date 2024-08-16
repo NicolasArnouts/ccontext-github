@@ -27,12 +27,8 @@ export async function POST(req: Request) {
     // getting vars from body content
     const { githubUrl, ccontextCommand } = await req.json();
 
-    if (!validateGitHubUrl(githubUrl)) {
-      return NextResponse.json(
-        { error: "Invalid GitHub URL" },
-        { status: 400 }
-      );
-    }
+    validateGitHubUrl(githubUrl);
+
     const sanitizedCommand = sanitizeInput(ccontextCommand);
 
     const repositoryId = await generateRepoSlug(githubUrl);
