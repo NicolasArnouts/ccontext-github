@@ -75,12 +75,16 @@ const GitHubCContext = () => {
       });
     } catch (error) {
       console.error("Error:", error);
+      let errorMessage = "An error occurred while processing your request.";
+      if (axios.isAxiosError(error) && error.response) {
+        errorMessage = error.response.data.error || errorMessage;
+      }
       toast({
         title: "Error",
-        description: "An error occurred while processing your request.",
+        description: errorMessage,
         variant: "destructive",
       });
-      setOutput("An error occurred while processing your request.");
+      setOutput(errorMessage);
     } finally {
       setIsLoading(false);
     }

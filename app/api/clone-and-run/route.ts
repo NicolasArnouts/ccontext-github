@@ -27,7 +27,11 @@ export async function POST(req: Request) {
     // getting vars from body content
     const { githubUrl, ccontextCommand } = await req.json();
 
-    validateGitHubUrl(githubUrl);
+    try {
+      validateGitHubUrl(githubUrl);
+    } catch (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
 
     const sanitizedCommand = sanitizeInput(ccontextCommand);
 
@@ -93,6 +97,9 @@ export async function POST(req: Request) {
     if (error.message === "Rate limit exceeded") {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
-    return NextResponse.json({ error: "An error occurred" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "An error occurred" },
+      { status: 500 }
+    );
   }
 }
