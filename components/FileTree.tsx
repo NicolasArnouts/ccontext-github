@@ -66,6 +66,8 @@ const parseFileTree = (markdownContent: string): TreeNode[] => {
   return root.children || [];
 };
 
+
+
 const FileTreeNode: React.FC<{ node: TreeNode; level: number }> = ({ node, level }) => {
   const [isOpen, setIsOpen] = React.useState(true);
 
@@ -112,5 +114,17 @@ const FileTree: React.FC<FileTreeProps> = ({ markdownContent }) => {
     </div>
   );
 };
+
+
+export function extractFileTreeContent(markdownContent: string): string | null {
+  const fileTreeRegex = /## FILE TREE ##([\s\S]*?)## END FILE TREE ##/;
+  const match = markdownContent.match(fileTreeRegex);
+
+  if (match) {
+    return match[1].trim();
+  }
+
+  return null;
+}
 
 export default FileTree;

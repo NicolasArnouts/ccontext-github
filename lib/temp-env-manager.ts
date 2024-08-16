@@ -9,6 +9,8 @@ import {
   sanitizeInput,
   generateRepoSlug,
   getFileRepoPath,
+  extractFileTreeContent,
+  extractFileTreeFromOutput,
 } from "@/lib/helpers";
 
 const execAsync = promisify(exec);
@@ -112,7 +114,12 @@ export class TempEnvManager {
     repositoryId: string,
     command: string,
     userId: string
-  ): Promise<{ stdout: string; stderr: string; markdownContent?: string }> {
+  ): Promise<{
+    stdout: string;
+    stderr: string;
+    markdownContent?: string;
+    fileTree?: string;
+  }> {
     const repository = await prismadb.repository.findFirst({
       where: { slug: repositoryId, userId },
     });
@@ -129,7 +136,7 @@ export class TempEnvManager {
 
     const repoExists = this.repoExistsInFileSystem(repository.slug, userId);
 
-    console.log("repoExists: !!!1!!!!11!!1!!!!!!!!1!!!!!!", repoExists);
+    console.log("repoExists:", repoExists);
 
     // Sanitize the command input
     let sanitizedCommand = sanitizeInput(command);
@@ -147,16 +154,15 @@ export class TempEnvManager {
       data: { updatedAt: new Date() },
     });
 
-    const result = await execAsync(
-      fullCommand
-      // 10 minute timeout
-      // { timeout: 10 * 60 * 1000 }
-    );
+    const result = await execAsync(fullCommand);
+
+    // Extract file tree from the command output
+    const fileTree = extractFileTreeFromOutput(result.stdout) || "";
 
     // Get markdown content if it exists
     const markdownContent = await this.getMarkdownIfExists(repoPath);
 
-    return { ...result, markdownContent };
+    return { ...result, markdownContent, fileTree };
   }
 
   async getMarkdownIfExists(repoPath: string): Promise<string | undefined> {

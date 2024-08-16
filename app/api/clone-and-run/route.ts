@@ -6,6 +6,8 @@ import {
   generateRepoSlug,
   sanitizeInput,
   validateGitHubUrl,
+  stripAnsiCodes,
+  extractFileTreeContent, // Add this import
 } from "@/lib/helpers";
 import { TempEnvManager } from "@/lib/temp-env-manager";
 
@@ -57,11 +59,19 @@ export async function POST(req: Request) {
         },
       });
 
+      // Strip ANSI codes from stdout and stderr
+      const cleanStdout = stripAnsiCodes(stdout);
+
+      // Extract the file tree content
+      const parsedFileTree = markdownContent
+        ? extractFileTreeContent(markdownContent)
+        : null;
+
       return NextResponse.json({
-        output: stdout,
-        error: stderr,
+        output: cleanStdout,
         repositoryId: repo.slug,
         markdownContent: markdownContent || null,
+        parsedFileTree: parsedFileTree, // Add this new field
       });
     } catch (error) {
       console.error("Error during command execution:", error);
