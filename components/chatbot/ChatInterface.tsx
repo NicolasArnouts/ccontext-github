@@ -1,10 +1,20 @@
-import React, { useEffect, useRef, useCallback } from "react";
+"use client";
+
+// components/chatbot/ChatInterface.tsx
+import React, { useEffect, useRef, useCallback, useState } from "react";
 import { useChat } from "ai/react";
+import { useUser } from "@clerk/nextjs";
+import axios from "axios";
+import { v4 as uuidv4 } from "uuid";
 import MessageList from "@/components/chatbot/MessageList";
 import ChatInput from "@/components/chatbot/ChatInput";
 import ScrollToBottomButton from "@/components/chatbot/ScrollToBottomButton";
+import SignInModal from "@/components/SignInModal";
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
+  const { user } = useUser();
+  const [showSignInModal, setShowSignInModal] = useState(false);
+  const [sessionId] = useState(() => uuidv4());
   const { messages, append, setMessages, isLoading, error } = useChat();
   const scrollRef = useRef<HTMLDivElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
@@ -29,12 +39,35 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
 
   const handleSubmit = useCallback(
     async (message: string) => {
-      await append({
-        role: "user",
-        content: message,
-      });
+      try {
+        const response = await axios.post(
+          "/api/token-tracking",
+          {
+            message,
+            model: "gpt-3.5-turbo", // or whichever model you're using
+          },
+          {
+            headers: { "x-session-id": sessionId },
+          }
+        );
+
+        if (response.data.error) {
+          setShowSignInModal(true);
+          return;
+        }
+
+        await append({
+          role: "user",
+          content: message,
+        });
+      } catch (error) {
+        console.error("Error submitting message:", error);
+        if (axios.isAxiosError(error) && error.response?.status === 403) {
+          setShowSignInModal(true);
+        }
+      }
     },
-    [append]
+    [append, sessionId]
   );
 
   const scrollToBottom = () => {
@@ -52,8 +85,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
       {error && <div className="text-red-500 p-2">Error: {error.message}</div>}
       <ScrollToBottomButton onClick={scrollToBottom} />
       <div>
-        <ChatInput onSubmit={handleSubmit} disabled={isLoading} />
+        <ChatInput
+          onSubmit={handleSubmit}
+          disabled={isLoading || showSignInModal}
+        />
       </div>
+      <SignInModal
+        isOpen={showSignInModal}
+        onClose={() => setShowSignInModal(false)}
+      />
     </div>
   );
 };

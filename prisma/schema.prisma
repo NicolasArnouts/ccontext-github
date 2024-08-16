@@ -51,3 +51,12 @@ model UserSubscription {
   stripePriceId          String?   @map(name: "stripe_price_id")
   stripeCurrentPeriodEnd DateTime? @map(name: "stripe_current_period_end")
 }
+
+model AnonymousSession {
+  id         String   @id @default(uuid())
+  sessionId  String   @unique
+  chatCount  Int      @default(0)
+  tokenUsage Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
