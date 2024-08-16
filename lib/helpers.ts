@@ -122,3 +122,14 @@ export function getFileRepoPath(baseDir: string, slug: string): string {
 }
 
 // Add any other utility functions your application might need
+
+export function extractFileTreeContent(markdownContent: string): string | null {
+  const fileTreeRegex = /## FILE TREE ##([\s\S]*?)## END FILE TREE ##/;
+  const match = markdownContent.match(fileTreeRegex);
+
+  if (match) {
+    return match[1].trim();
+  }
+
+  return null;
+}

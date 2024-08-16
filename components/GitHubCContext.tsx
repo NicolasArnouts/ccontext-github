@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import axios from 'axios'
 import { debounce } from '@/lib/helpers-client'
-import MarkdownDisplay from '@/components/MarkdownDisplay'
+import FileTree from '@/components/FileTree'
 
 const GitHubCContext = () => {
   const [githubUrl, setGithubUrl] = useState('')
@@ -88,6 +88,24 @@ const GitHubCContext = () => {
     })
   }
 
+  const handleDownloadMarkdown = () => {
+    if (markdownContent) {
+      const blob = new Blob([markdownContent], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'ccontext-output.md';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({
+        title: "Downloaded!",
+        description: "Markdown file has been downloaded.",
+      })
+    }
+  }
+
   return (
     <div className="space-y-4">
       <Input
@@ -122,8 +140,8 @@ const GitHubCContext = () => {
       {markdownContent && (
         <div>
           <h3 className="text-lg font-semibold mb-2">Generated Markdown:</h3>
-          <MarkdownDisplay content={markdownContent} />
-          <Button onClick={() => handleCopyToClipboard(markdownContent)} className='flex w-full mt-2'>Copy Markdown to Clipboard</Button>
+          <Button onClick={handleDownloadMarkdown} className='flex w-full mb-4'>Download Markdown</Button>
+          <FileTree markdownContent={markdownContent} />
         </div>
       )}
       {envId && (
@@ -133,7 +151,6 @@ const GitHubCContext = () => {
       )}
     </div>
   )
-
 }
 
 export default GitHubCContext

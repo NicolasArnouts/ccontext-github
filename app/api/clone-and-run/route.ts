@@ -31,7 +31,6 @@ export async function POST(req: Request) {
     const sanitizedCommand = sanitizeInput(ccontextCommand);
 
     const repositoryId = await generateRepoSlug(githubUrl);
-    console.log("done generating reposlug");
 
     try {
       let repo = await tempEnvManager.getRepository(repositoryId, userId);

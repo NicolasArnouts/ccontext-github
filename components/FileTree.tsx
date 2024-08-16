@@ -5,11 +5,66 @@ interface TreeNode {
   name: string;
   type: 'file' | 'directory';
   children?: TreeNode[];
+  size?: number;
 }
 
 interface FileTreeProps {
-  tree: TreeNode[];
+  markdownContent: string;
 }
+
+const parseFileTree = (markdownContent: string): TreeNode[] => {
+  const fileTreeRegex = /## FILE TREE ##([\s\S]*?)## END FILE TREE ##/;
+  const match = markdownContent.match(fileTreeRegex);
+
+  if (!match) {
+    return [];
+  }
+
+  const fileTreeContent = match[1];
+  const lines = fileTreeContent.trim().split('\n');
+  const root: TreeNode = { type: 'directory', name: 'root', children: [] };
+  const stack: TreeNode[] = [root];
+
+  lines.forEach((line) => {
+    const level = line.match(/^-+/)?.[0].length ?? 0;
+    const isFile = line.includes('📄') || line.includes('◆');
+    const isDirectory = line.includes('📁') || line.includes('▼') || line.includes('▶');
+
+    if (isFile || isDirectory) {
+      while (stack.length > level / 4 + 1) {
+        stack.pop();
+      }
+
+      const parent = stack[stack.length - 1];
+      
+      // Updated regex to capture file name and size
+      const fileMatch = line.match(/[📁📄▼▶◆]\s*(\d+)?\s*(.+?)(?:\s*\(#.*\))?$/);
+      if (fileMatch) {
+        const size = fileMatch[1] ? parseInt(fileMatch[1]) : undefined;
+        let name = fileMatch[2].trim();
+        
+        // Remove any remaining brackets and everything after '#'
+        name = name.replace(/[\[\]]/g, '').split('#')[0].trim();
+
+        const newNode: TreeNode = {
+          type: isFile ? 'file' : 'directory',
+          name,
+          ...(size !== undefined && { size }),
+          ...(isDirectory && { children: [] }),
+        };
+
+        parent.children = parent.children || [];
+        parent.children.push(newNode);
+
+        if (isDirectory) {
+          stack.push(newNode);
+        }
+      }
+    }
+  });
+
+  return root.children || [];
+};
 
 const FileTreeNode: React.FC<{ node: TreeNode; level: number }> = ({ node, level }) => {
   const [isOpen, setIsOpen] = React.useState(true);
@@ -32,6 +87,7 @@ const FileTreeNode: React.FC<{ node: TreeNode; level: number }> = ({ node, level
           <FileIcon size={16} className="mr-2 text-blue-500" />
         )}
         <span>{node.name}</span>
+        {node.size !== undefined && <span className="ml-2 text-sm text-gray-500">({node.size} bytes)</span>}
       </div>
       {node.type === 'directory' && isOpen && node.children && (
         <div>
@@ -44,7 +100,9 @@ const FileTreeNode: React.FC<{ node: TreeNode; level: number }> = ({ node, level
   );
 };
 
-const FileTree: React.FC<FileTreeProps> = ({ tree }) => {
+const FileTree: React.FC<FileTreeProps> = ({ markdownContent }) => {
+  const tree = parseFileTree(markdownContent);
+
   return (
     <div className="bg-gray-100 p-4 rounded-lg">
       <h3 className="text-lg font-semibold mb-2">File Tree</h3>
