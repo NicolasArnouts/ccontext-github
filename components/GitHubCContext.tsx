@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
-import { debounce } from "@/lib/helpers-client";
 import FileTree from "@/components/FileTree";
 
 const GitHubCContext = () => {
@@ -19,39 +18,15 @@ const GitHubCContext = () => {
   const [envId, setEnvId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const debouncedSetGithubUrl = useCallback(
-    debounce((value: string) => setGithubUrl(value), 100),
-    []
-  );
+  const handleGithubUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setGithubUrl(e.target.value);
+  };
 
-  const debouncedSetCcontextCommand = useCallback(
-    debounce((value: string) => setCcontextCommand(value), 100),
-    []
-  );
-
-  useEffect(() => {
-    // Check environment status every minute
-    const intervalId = setInterval(async () => {
-      if (envId) {
-        try {
-          const response = await axios.get(
-            `/api/environment-status?envId=${envId}`
-          );
-          if (response.data.isActive) {
-            toast({
-              title: "Environment Active",
-              description: `Environment ${envId} is still active.`,
-            });
-          }
-        } catch (error) {
-          console.error("Error checking environment status:", error);
-          setEnvId(null);
-        }
-      }
-    }, 60000);
-
-    return () => clearInterval(intervalId);
-  }, [envId, toast]);
+  const handleCcontextCommandChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setCcontextCommand(e.target.value);
+  };
 
   const handleCloneAndRun = async () => {
     try {
@@ -130,14 +105,13 @@ const GitHubCContext = () => {
     <div className="space-y-4">
       <Input
         placeholder="Enter GitHub URL"
-        defaultValue={githubUrl}
-        onChange={(e) => debouncedSetGithubUrl(e.target.value)}
-        disabled={!!envId}
+        value={githubUrl}
+        onChange={handleGithubUrlChange}
       />
       <Input
         placeholder="CContext command"
-        defaultValue={ccontextCommand}
-        onChange={(e) => debouncedSetCcontextCommand(e.target.value)}
+        value={ccontextCommand}
+        onChange={handleCcontextCommandChange}
       />
 
       <Button
@@ -186,7 +160,7 @@ const GitHubCContext = () => {
               </Button>
             )}
           </div>
-          {/* {markdownContent && <FileTree markdownContent={markdownContent} />} */}
+          {markdownContent && <FileTree markdownContent={markdownContent} />}
         </div>
       )}
       {envId && (
