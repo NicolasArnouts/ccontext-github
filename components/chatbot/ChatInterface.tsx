@@ -1,4 +1,6 @@
-import React, { useEffect } from "react";
+"use client";
+
+import React, { useEffect, useRef, useCallback } from "react";
 import { useChat } from "ai/react";
 import MessageList from "@/components/chatbot/MessageList";
 import ChatInput from "@/components/chatbot/ChatInput";
@@ -8,12 +10,11 @@ interface ChatInterfaceProps {
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
-  const { messages, input, handleInputChange, handleSubmit, setMessages } =
-    useChat();
+  const { messages, append, setMessages, isLoading } = useChat();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (markdownContent) {
-      // Add the markdown content as the first message from the assistant
       setMessages([
         {
           id: "markdown-content-data",
@@ -24,14 +25,30 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
     }
   }, [markdownContent, setMessages]);
 
+  useEffect(() => {
+    if (scrollRef.current && messages.length > 0) {
+      scrollRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [messages]);
+
+  const handleSubmit = useCallback(
+    (message: string) => {
+      append({
+        role: "user",
+        content: message,
+      });
+    },
+    [append]
+  );
+
   return (
-    <div className="flex flex-col ">
-      <MessageList messages={messages} />
-      <ChatInput
-        input={input}
-        handleInputChange={handleInputChange}
-        handleSubmit={handleSubmit}
-      />
+    <div className="flex flex-col h-full">
+      <div className="flex-grow overflow-auto">
+        <MessageList messages={messages} />
+      </div>
+      <div ref={scrollRef}>
+        <ChatInput onSubmit={handleSubmit} />
+      </div>
     </div>
   );
 };

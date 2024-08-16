@@ -1,24 +1,40 @@
 "use client";
 
-import React from "react";
+import React, { useState, useCallback } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface ChatInputProps {
-  input: string;
-  handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  onSubmit: (message: string) => void;
 }
 
-const ChatInput: React.FC<ChatInputProps> = ({
-  input,
-  handleInputChange,
-  handleSubmit,
-}) => {
+const ChatInput: React.FC<ChatInputProps> = ({ onSubmit }) => {
+  const [inputValue, setInputValue] = useState("");
+  const debouncedInputValue = useDebounce(inputValue, 300);
+
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setInputValue(e.target.value);
+    },
+    []
+  );
+
+  const handleSubmit = useCallback(
+    (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      if (inputValue.trim()) {
+        onSubmit(inputValue);
+        setInputValue("");
+      }
+    },
+    [inputValue, onSubmit]
+  );
+
   return (
     <form onSubmit={handleSubmit} className="p-4">
       <div className="flex">
         <input
           type="text"
-          value={input}
+          value={inputValue}
           onChange={handleInputChange}
           placeholder="Type your message..."
           className="flex-1 p-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

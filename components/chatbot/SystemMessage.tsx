@@ -1,6 +1,9 @@
+"use client";
+
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import useDebounce from "@/hooks/useDebounce";
 
 interface SystemMessageProps {
   content: string;
@@ -8,7 +11,7 @@ interface SystemMessageProps {
 
 const SystemMessage: React.FC<SystemMessageProps> = ({ content }) => {
   return (
-    <div className=" justify-start mb-4">
+    <div className="justify-start mb-4">
       <div className="bg-gray-200 rounded-lg py-2 px-4 overflow-x-scroll">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
       </div>
