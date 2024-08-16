@@ -21,20 +21,20 @@ export default function Home() {
     <main className="flex  flex-col items-center justify-between">
       <div className="space-y-6 w-full ">
         <div className="">
-          <ResizablePanelGroup direction="horizontal" className="">
+          <ResizablePanelGroup direction="horizontal" className="rounded-2xl ">
             <ResizablePanel className=" overflow-scroll ">
-              <div className="h-[80svh] overflow-scroll">
+              <div className="h-[80svh] overflow-scroll bg-gray-50 dark:bg-gray-700 p-4">
                 <GitHubCContext onMarkdownGenerated={handleMarkdownGenerated} />
               </div>
             </ResizablePanel>
-            <ResizableHandle className="p-1 bg-gray-200" />
+            <ResizableHandle className="p-1 bg-gray-200 dark:bg-gray-600" />
             <ResizablePanel className=" h-[80svh] ">
               {markdownContent ? (
-                <div className="bg-gray-50 rounded-3xl h-[80svh] overflow-scroll">
+                <div className="bg-gray-50 dark:bg-gray-600 md:rounded-none rounded-3xl h-[80svh] overflow-scroll">
                   <ChatInterface markdownContent={markdownContent} />
                 </div>
               ) : (
-                <div className="bg-gray-50 rounded-3xl h-[80svh] overflow-scroll">
+                <div className="bg-gray-50  dark:bg-gray-600 md:rounded-none rounded-3xl h-[80svh] overflow-scroll">
                   <ChatInterface />
                 </div>
               )}

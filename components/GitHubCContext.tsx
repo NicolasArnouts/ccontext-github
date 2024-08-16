@@ -127,11 +127,13 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
         placeholder="Enter GitHub URL"
         value={githubUrl}
         onChange={handleGithubUrlChange}
+        className="bg-background text-foreground"
       />
       <Input
         placeholder="CContext command"
         value={ccontextCommand}
         onChange={handleCcontextCommandChange}
+        className="bg-background text-foreground"
       />
 
       <Button
@@ -147,12 +149,14 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
       </Button>
       <div className="w-full">
         <div>
-          <h3 className="text-lg font-semibold mb-2">Command Output:</h3>
+          <h3 className="text-lg font-semibold mb-2 text-foreground">
+            Command Output:
+          </h3>
           <Textarea
             placeholder="Output will appear here..."
             value={output}
             readOnly
-            className="h-64 font-mono text-sm mb-2 w-full"
+            className="h-64 font-mono text-sm mb-2 w-full bg-background text-foreground border-border"
           />
           {output && (
             <Button
@@ -167,7 +171,9 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
 
       {(markdownContent || pdfExists) && (
         <div>
-          <h3 className="text-lg font-semibold mb-2">Generated Content:</h3>
+          <h3 className="text-lg font-semibold mb-2 text-foreground">
+            Generated Content:
+          </h3>
           <div className="flex space-x-2 mb-4">
             {markdownContent && (
               <Button onClick={handleDownloadMarkdown} className="flex-1">
@@ -188,7 +194,7 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
       )}
       {envId && (
         <div>
-          <p>Active Environment ID: {envId}</p>
+          <p className="text-foreground">Active Environment ID: {envId}</p>
         </div>
       )}
     </div>
