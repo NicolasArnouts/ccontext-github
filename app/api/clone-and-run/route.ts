@@ -13,12 +13,6 @@ const tempEnvManager = new TempEnvManager();
 
 export async function POST(req: Request) {
   try {
-    // // Apply rate limiting
-    // await rateLimit("clone-and-run", {
-    //   interval: 60 * 1000, // 1 minute
-    //   maxRequests: 5, // 5 requests per minute
-    // });
-
     const { userId } = auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -40,21 +34,22 @@ export async function POST(req: Request) {
     console.log("done generating reposlug");
 
     try {
-      let repo = await tempEnvManager.getRepository(repositoryId);
+      let repo = await tempEnvManager.getRepository(repositoryId, userId);
 
-      if (!repo) {
-        // repo does not exist
+      if (
+        !repo ||
+        !tempEnvManager.repoExistsInFileSystem(repositoryId, userId)
+      ) {
+        // Repo does not exist in database or file system
+        console.log("Repo does not exist in database or file system");
+
         // Create or update the repository
         repo = await tempEnvManager.createOrUpdateRepository(githubUrl, userId);
       }
 
-      // check if the repo exists in the file system
-
       // Run ccontext command
-      const { stdout, stderr } = await tempEnvManager.runCommand(
-        repo.slug,
-        sanitizedCommand
-      );
+      const { stdout, stderr, markdownContent } =
+        await tempEnvManager.runCommand(repo.slug, sanitizedCommand, userId);
 
       await prismadb.run.create({
         data: {
@@ -67,6 +62,7 @@ export async function POST(req: Request) {
         output: stdout,
         error: stderr,
         repositoryId: repo.slug,
+        markdownContent: markdownContent || null,
       });
     } catch (error) {
       console.error("Error during command execution:", error);

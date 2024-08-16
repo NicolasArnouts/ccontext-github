@@ -7,11 +7,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import axios from 'axios'
 import { debounce } from '@/lib/helpers-client'
+import MarkdownDisplay from '@/components/MarkdownDisplay'
 
 const GitHubCContext = () => {
   const [githubUrl, setGithubUrl] = useState('')
   const [ccontextCommand, setCcontextCommand] = useState('ccontext -gm')
   const [output, setOutput] = useState('')
+  const [markdownContent, setMarkdownContent] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [envId, setEnvId] = useState<string | null>(null)
   const { toast } = useToast()
@@ -52,13 +54,15 @@ const GitHubCContext = () => {
     try {
       setIsLoading(true)
       setOutput('Processing...')
+      setMarkdownContent(null)
       const response = await axios.post('/api/clone-and-run', {
         githubUrl,
         ccontextCommand,
         envId
       })
       setOutput(response.data.output || response.data.error)
-      setEnvId(response.data.envId)
+      setMarkdownContent(response.data.markdownContent || null)
+      setEnvId(response.data.repositoryId)
       toast({
         title: "Success",
         description: "Command executed successfully.",
@@ -115,6 +119,13 @@ const GitHubCContext = () => {
           )}
         </div>
       </div>
+      {markdownContent && (
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Generated Markdown:</h3>
+          <MarkdownDisplay content={markdownContent} />
+          <Button onClick={() => handleCopyToClipboard(markdownContent)} className='flex w-full mt-2'>Copy Markdown to Clipboard</Button>
+        </div>
+      )}
       {envId && (
         <div>
           <p>Active Environment ID: {envId}</p>
@@ -122,6 +133,7 @@ const GitHubCContext = () => {
       )}
     </div>
   )
+
 }
 
 export default GitHubCContext

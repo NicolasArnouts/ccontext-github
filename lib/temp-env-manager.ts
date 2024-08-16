@@ -19,7 +19,8 @@ export class TempEnvManager {
 
   constructor(lifetime = 12 * 60 * 60) {
     // 12 hours default lifetime
-    this.baseDir = "/tmp/ccontext_repos";
+    this.baseDir =
+      "/Users/narn/Desktop/school/ccontext-github/temp_environments";
     this.lifetime = lifetime;
 
     if (!fs.existsSync(this.baseDir)) {
@@ -30,19 +31,38 @@ export class TempEnvManager {
     setInterval(() => this.cleanupExpiredRepositories(), 60 * 60 * 1000); // Run every hour
   }
 
+  private getUserDir(userId: string): string {
+    const userDir = path.join(this.baseDir, userId);
+    if (!fs.existsSync(userDir)) {
+      fs.mkdirSync(userDir, { recursive: true });
+    }
+    return userDir;
+  }
+
+  private getRepoPath(userId: string, repoSlug: string): string {
+    const userDir = this.getUserDir(userId);
+    const repoPath = path.join(userDir, repoSlug);
+
+    return repoPath;
+  }
+
   async createOrUpdateRepository(repoUrl: string, userId: string) {
     if (!validateGitHubUrl(repoUrl)) {
       throw new Error("Invalid GitHub URL");
     }
 
     const slug = await generateRepoSlug(repoUrl);
-    const repoFilePath = getFileRepoPath(this.baseDir, slug);
+    const userDir = this.getUserDir(userId);
+    const repoFilePath = path.join(userDir, slug);
 
     let repository = await prismadb.repository.findFirst({
-      where: { slug },
+      where: { slug, userId },
     });
 
+    // inner function for cloning the repository
     const cloneRepo = async () => {
+      console.log(`cloning repo to ${repoFilePath}`);
+
       await execAsync(`git clone ${repoUrl} ${repoFilePath}`);
     };
 
@@ -50,21 +70,17 @@ export class TempEnvManager {
       console.log("Repository exists in the database");
 
       // Repository exists in the database, check if it exists on the file system
-      if (!fs.existsSync(repoFilePath)) {
-        // Repository doesn't exist on the file system, clone it
-        console.log("Repository doesn't exist on the file system, clone it");
-
+      if (!this.repoExistsInFileSystem(slug, userId)) {
+        console.log("Repository doesn't exist on the file system, cloning it");
         await cloneRepo();
       } else {
-        // Repository exists on the file system, do nothing
-        console.log("Repository exists on the file system, do nothing");
+        console.log("Repository exists on the file system, no action needed");
       }
     } else {
       console.log("Repository doesn't exist in the database");
       // Repository doesn't exist in the database
-      if (!fs.existsSync(repoFilePath)) {
-        // Repository doesn't exist on the file system, clone it
-        await cloneRepo;
+      if (!this.repoExistsInFileSystem(slug, userId)) {
+        await cloneRepo();
       }
 
       // Create the repository entry in the database
@@ -80,32 +96,50 @@ export class TempEnvManager {
     return repository;
   }
 
+  repoExistsInFileSystem(slug: string, userId: string): boolean {
+    const repoPath = this.getRepoPath(userId, slug);
+
+    const isExisting = fs.existsSync(repoPath);
+
+    if (isExisting) {
+      console.log("Repository exists in the file system");
+    }
+
+    return isExisting;
+  }
+
   async runCommand(
     repositoryId: string,
-    command: string
-  ): Promise<{ stdout: string; stderr: string }> {
-    const repository = await prismadb.repository.findUnique({
-      where: { slug: repositoryId },
+    command: string,
+    userId: string
+  ): Promise<{ stdout: string; stderr: string; markdownContent?: string }> {
+    const repository = await prismadb.repository.findFirst({
+      where: { slug: repositoryId, userId },
     });
 
     if (!repository) {
-      throw new Error("Repository not found");
+      throw new Error("Repository not found for this user");
     }
 
     console.log("Running command:", command);
     console.log("Repository:", repository);
 
-    const repoPath = path.join(this.baseDir, repository.slug);
+    const userDir = this.getUserDir(userId);
+    const repoPath = path.join(userDir, repository.slug);
+
+    const repoExists = this.repoExistsInFileSystem(repository.slug, userId);
+
+    console.log("repoExists: !!!1!!!!11!!1!!!!!!!!1!!!!!!", repoExists);
 
     // Sanitize the command input
-    const sanitizedCommand = sanitizeInput(command);
+    let sanitizedCommand = sanitizeInput(command);
 
     // Modify the command to ensure ccontext is only called once
     const modifiedCommand = sanitizedCommand.startsWith("ccontext")
       ? sanitizedCommand
       : `ccontext ${sanitizedCommand}`;
 
-    const fullCommand = `cd ${repoPath} && ${modifiedCommand}`;
+    const fullCommand = `cd ${repoPath} && ${modifiedCommand} -gm -g`;
 
     // Update last accessed time
     await prismadb.repository.update({
@@ -113,7 +147,41 @@ export class TempEnvManager {
       data: { updatedAt: new Date() },
     });
 
-    return execAsync(fullCommand, { timeout: 10 * 60 * 1000 }); // 10 minute timeout
+    const result = await execAsync(
+      fullCommand
+      // 10 minute timeout
+      // { timeout: 10 * 60 * 1000 }
+    );
+
+    // Get markdown content if it exists
+    const markdownContent = await this.getMarkdownIfExists(repoPath);
+
+    return { ...result, markdownContent };
+  }
+
+  async getMarkdownIfExists(repoPath: string): Promise<string | undefined> {
+    console.log("repoPath:", repoPath);
+
+    const markdownPath = path.join(repoPath, "ccontext-output.md");
+
+    console.log("markdownPath", markdownPath);
+
+    if (fs.existsSync(markdownPath)) {
+      console.log("IT EXISTSSSSWS!!!!!!!!!!!");
+
+      let markdownContent = "";
+
+      try {
+        markdownContent = await fs.promises.readFile(markdownPath, "utf-8");
+      } catch (error) {
+        console.error("Error reading markdown file:", error);
+      }
+
+      return markdownContent;
+    }
+    console.log("IT does not exist ;((");
+
+    return undefined;
   }
 
   async cleanupExpiredRepositories(): Promise<void> {
@@ -123,7 +191,8 @@ export class TempEnvManager {
     });
 
     for (const repo of expiredRepos) {
-      const repoPath = path.join(this.baseDir, repo.slug);
+      const userDir = this.getUserDir(repo.userId);
+      const repoPath = path.join(userDir, repo.slug);
       if (fs.existsSync(repoPath)) {
         await fs.promises.rm(repoPath, { recursive: true, force: true });
       }
@@ -131,9 +200,9 @@ export class TempEnvManager {
     }
   }
 
-  async getRepository(repositoryId: string) {
-    const repository = await prismadb.repository.findUnique({
-      where: { slug: repositoryId },
+  async getRepository(repositoryId: string, userId: string) {
+    const repository = await prismadb.repository.findFirst({
+      where: { slug: repositoryId, userId },
     });
     return repository;
   }

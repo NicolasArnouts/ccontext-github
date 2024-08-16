@@ -111,7 +111,10 @@ export async function generateRepoSlug(url: string): Promise<string> {
   const { owner, repo } = repoInfo;
   const baseSlug = `${owner}-${repo}`;
   const latestCommit = await getLatestCommitFromGitHub(url);
-  return `${baseSlug}-${latestCommit}`;
+
+  const finalSlug = `${baseSlug}-${latestCommit}`.toLowerCase();
+
+  return finalSlug;
 }
 
 export function getFileRepoPath(baseDir: string, slug: string): string {
