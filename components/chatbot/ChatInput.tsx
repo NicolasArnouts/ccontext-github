@@ -30,7 +30,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSubmit }) => {
   );
 
   return (
-    <form onSubmit={handleSubmit} className="p-4">
+    <form onSubmit={handleSubmit} className="p-4 shadow-md">
       <div className="flex">
         <input
           type="text"
