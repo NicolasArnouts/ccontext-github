@@ -1,13 +1,12 @@
-"use client";
-
 import React, { useState, useCallback } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 
 interface ChatInputProps {
   onSubmit: (message: string) => void;
+  disabled?: boolean;
 }
 
-const ChatInput: React.FC<ChatInputProps> = ({ onSubmit }) => {
+const ChatInput: React.FC<ChatInputProps> = ({ onSubmit, disabled }) => {
   const [inputValue, setInputValue] = useState("");
   const debouncedInputValue = useDebounce(inputValue, 300);
 
@@ -21,12 +20,12 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSubmit }) => {
   const handleSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      if (inputValue.trim()) {
+      if (inputValue.trim() && !disabled) {
         onSubmit(inputValue);
         setInputValue("");
       }
     },
-    [inputValue, onSubmit]
+    [inputValue, onSubmit, disabled]
   );
 
   return (
@@ -38,10 +37,12 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSubmit }) => {
           onChange={handleInputChange}
           placeholder="Type your message..."
           className="flex-1 p-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={disabled}
         />
         <button
           type="submit"
-          className="bg-blue-500 text-white font-bold px-4 py-2 rounded-r-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="bg-blue-500 text-white font-bold px-4 py-2 rounded-r-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          disabled={disabled}
         >
           Send
         </button>

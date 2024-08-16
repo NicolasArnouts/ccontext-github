@@ -106,7 +106,17 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
 
   const handleChatWithAI = () => {
     if (markdownContent) {
+      // Send markdown content as a system message
       onMarkdownGenerated(markdownContent);
+
+      // Simulate sending the content to the AI and getting a response
+      // In a real scenario, you'd make an API call here
+      setTimeout(() => {
+        const aiResponse =
+          "I've received the markdown content. How can I help you with it?";
+        setOutput(aiResponse);
+      }, 1000);
+
       toast({
         title: "Chat Initialized",
         description:

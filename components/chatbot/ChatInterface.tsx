@@ -4,18 +4,8 @@ import MessageList from "@/components/chatbot/MessageList";
 import ChatInput from "@/components/chatbot/ChatInput";
 import ScrollToBottomButton from "@/components/chatbot/ScrollToBottomButton";
 
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
-
-interface ChatInterfaceProps {
-  markdownContent?: string;
-}
-
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
-  const { messages, append, setMessages, isLoading } = useChat();
+  const { messages, append, setMessages, isLoading, error } = useChat();
   const scrollRef = useRef<HTMLDivElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
 
@@ -23,7 +13,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
     if (markdownContent) {
       setMessages([
         {
-          id: "markdown-content-data",
+          id: "markdown-content",
           role: "system",
           content: markdownContent,
         },
@@ -38,8 +28,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
   }, [messages]);
 
   const handleSubmit = useCallback(
-    (message: string) => {
-      append({
+    async (message: string) => {
+      await append({
         role: "user",
         content: message,
       });
@@ -56,12 +46,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
   return (
     <div className="flex flex-col h-full relative">
       <div className="flex-grow overflow-auto" ref={messageListRef}>
-        <MessageList messages={messages} />
+        <MessageList messages={messages} isLoading={isLoading} />
         <div ref={scrollRef} />
       </div>
+      {error && <div className="text-red-500 p-2">Error: {error.message}</div>}
       <ScrollToBottomButton onClick={scrollToBottom} />
       <div>
-        <ChatInput onSubmit={handleSubmit} />
+        <ChatInput onSubmit={handleSubmit} disabled={isLoading} />
       </div>
     </div>
   );

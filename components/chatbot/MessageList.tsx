@@ -2,14 +2,15 @@ import React from "react";
 import { Message } from "ai";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import UserMessage from "@/components/chatbot/UserMessage.tsx";
+import UserMessage from "@/components/chatbot/UserMessage";
 import SystemMessage from "@/components/chatbot/SystemMessage";
 
 interface MessageListProps {
   messages: Message[];
+  isLoading: boolean;
 }
 
-const MessageList: React.FC<MessageListProps> = ({ messages }) => {
+const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
   return (
     <div className="flex-1 p-4 space-y-4 overflow-auto">
       {messages.map((message) => (
@@ -21,6 +22,11 @@ const MessageList: React.FC<MessageListProps> = ({ messages }) => {
           )}
         </div>
       ))}
+      {isLoading && (
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
+        </div>
+      )}
     </div>
   );
 };
