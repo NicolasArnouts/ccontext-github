@@ -142,7 +142,7 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
         {isLoading
           ? "Processing..."
           : envId
-          ? "Run Command"
+          ? "Run CContext"
           : "Clone and Run CContext"}
       </Button>
       <div className="w-full">

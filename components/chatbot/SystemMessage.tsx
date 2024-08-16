@@ -8,8 +8,8 @@ interface SystemMessageProps {
 
 const SystemMessage: React.FC<SystemMessageProps> = ({ content }) => {
   return (
-    <div className="flex justify-start mb-4 bg-red-200">
-      <div className="bg-gray-200 rounded-lg py-2 px-4 max-w-full">
+    <div className=" justify-start mb-4">
+      <div className="bg-gray-200 rounded-lg py-2 px-4 overflow-x-scroll">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
       </div>
     </div>

@@ -2,10 +2,11 @@ import React from "react";
 import { Message } from "ai";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import UserMessage from "./UserMessage.tsx";
-import SystemMessage from "./SystemMessage";
+import UserMessage from "@/components/chatbot/UserMessage.tsx";
+import SystemMessage from "@/components/chatbot/SystemMessage";
 
 interface MessageListProps {
+  z;
   messages: Message[];
 }
 
