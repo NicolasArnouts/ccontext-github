@@ -15,7 +15,7 @@ const SystemMessage: React.FC<SystemMessageProps> = ({ content }) => {
 
   return (
     <div className="justify-start mb-4">
-      <div className="bg-gray-200 dark:bg-gray-800 dark:text-white rounded-lg py-2 px-4 overflow-x-scroll">
+      <div className="bg-gray-200 dark:bg-gray-800 dark:text-white rounded-lg py-2 px-4 overflow-x-auto">
         {memoizedMarkdown}
       </div>
     </div>
