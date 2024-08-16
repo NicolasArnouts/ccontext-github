@@ -64,7 +64,6 @@ export class TempEnvManager {
     // inner function for cloning the repository
     const cloneRepo = async () => {
       console.log(`cloning repo to ${repoFilePath}`);
-
       await execAsync(`git clone ${repoUrl} ${repoFilePath}`);
     };
 
@@ -84,16 +83,25 @@ export class TempEnvManager {
       if (!this.repoExistsInFileSystem(slug, userId)) {
         await cloneRepo();
       }
-
-      // Create the repository entry in the database
-      repository = await prismadb.repository.create({
-        data: {
-          slug: slug,
-          url: repoUrl,
-          userId: userId,
-        },
-      });
     }
+
+    // Always update or create the repository entry in the database
+    repository = await prismadb.repository.upsert({
+      where: {
+        slug: slug,
+      },
+      update: {
+        url: repoUrl,
+        userId: userId,
+      },
+      create: {
+        slug: slug,
+        url: repoUrl,
+        userId: userId,
+      },
+    });
+
+    console.log("Repository upserted:", repository);
 
     return repository;
   }
@@ -125,6 +133,7 @@ export class TempEnvManager {
     });
 
     if (!repository) {
+      console.log(`Repository not found: ${repositoryId} for user ${userId}`);
       throw new Error("Repository not found for this user");
     }
 
@@ -137,6 +146,11 @@ export class TempEnvManager {
     const repoExists = this.repoExistsInFileSystem(repository.slug, userId);
 
     console.log("repoExists:", repoExists);
+
+    if (!repoExists) {
+      console.log("Repository doesn't exist in the file system, creating it");
+      await this.createOrUpdateRepository(repository.url, userId);
+    }
 
     // Sanitize the command input
     let sanitizedCommand = sanitizeInput(command);
@@ -173,7 +187,7 @@ export class TempEnvManager {
     console.log("markdownPath", markdownPath);
 
     if (fs.existsSync(markdownPath)) {
-      console.log("IT EXISTSSSSWS!!!!!!!!!!!");
+      console.log("Markdown file exists");
 
       let markdownContent = "";
 
@@ -185,7 +199,7 @@ export class TempEnvManager {
 
       return markdownContent;
     }
-    console.log("IT does not exist ;((");
+    console.log("Markdown file does not exist");
 
     return undefined;
   }

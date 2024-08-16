@@ -1,13 +1,16 @@
+// app/api/clone-and-run/route.ts
 import { NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import prismadb from "@/lib/prismadb";
 import { auth } from "@clerk/nextjs/server";
+import fs from "fs";
+import path from "path";
 import {
   generateRepoSlug,
   sanitizeInput,
   validateGitHubUrl,
   stripAnsiCodes,
-  extractFileTreeContent, // Add this import
+  extractFileTreeContent,
 } from "@/lib/helpers";
 import { TempEnvManager } from "@/lib/temp-env-manager";
 
@@ -67,11 +70,20 @@ export async function POST(req: Request) {
         ? extractFileTreeContent(markdownContent)
         : null;
 
+      // Check if PDF exists
+      const baseDir =
+        "/Users/narn/Desktop/school/ccontext-github/temp_environments";
+      const userDir = path.join(baseDir, userId);
+      const repoPath = path.join(userDir, repo.slug);
+      const pdfPath = path.join(repoPath, "ccontext-output.pdf");
+      const pdfExists = fs.existsSync(pdfPath);
+
       return NextResponse.json({
         output: cleanStdout,
         repositoryId: repo.slug,
         markdownContent: markdownContent || null,
-        parsedFileTree: parsedFileTree, // Add this new field
+        parsedFileTree: parsedFileTree,
+        pdfExists: pdfExists,
       });
     } catch (error) {
       console.error("Error during command execution:", error);

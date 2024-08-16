@@ -14,7 +14,7 @@ const GitHubCContext = () => {
   const [ccontextCommand, setCcontextCommand] = useState('ccontext -gm')
   const [output, setOutput] = useState('')
   const [markdownContent, setMarkdownContent] = useState<string | null>(null)
-  const [pdfContent, setPdfContent] = useState<Blob | null>(null)
+  const [pdfExists, setPdfExists] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [envId, setEnvId] = useState<string | null>(null)
   const { toast } = useToast()
@@ -56,7 +56,7 @@ const GitHubCContext = () => {
       setIsLoading(true)
       setOutput('Processing...')
       setMarkdownContent(null)
-      setPdfContent(null)
+      setPdfExists(false)
       const response = await axios.post('/api/clone-and-run', {
         githubUrl,
         ccontextCommand,
@@ -64,15 +64,8 @@ const GitHubCContext = () => {
       })
       setOutput(response.data.output || response.data.error)
       setMarkdownContent(response.data.markdownContent || null)
+      setPdfExists(response.data.pdfExists || false)
       setEnvId(response.data.repositoryId)
-
-      // Fetch PDF content if it exists
-      if (response.data.pdfExists) {
-        const pdfResponse = await axios.get(`/api/clone-and-run/pdf?envId=${response.data.repositoryId}`, {
-          responseType: 'blob'
-        });
-        setPdfContent(pdfResponse.data);
-      }
 
       toast({
         title: "Success",
@@ -118,15 +111,8 @@ const GitHubCContext = () => {
   }
 
   const handleDownloadPdf = () => {
-    if (pdfContent) {
-      const url = URL.createObjectURL(pdfContent);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'ccontext-output.pdf';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+    if (pdfExists && envId) {
+      window.open(`/api/download-pdf?envId=${envId}`, '_blank');
       toast({
         title: "Downloaded!",
         description: "PDF file has been downloaded.",
@@ -165,14 +151,15 @@ const GitHubCContext = () => {
           )}
         </div>
       </div>
-      {(markdownContent || pdfContent) && (
+
+      {(markdownContent || pdfExists) && (
         <div>
           <h3 className="text-lg font-semibold mb-2">Generated Content:</h3>
           <div className="flex space-x-2 mb-4">
             {markdownContent && (
               <Button onClick={handleDownloadMarkdown} className='flex-1'>Download Markdown</Button>
             )}
-            {pdfContent && (
+            {pdfExists && (
               <Button onClick={handleDownloadPdf} className='flex-1'>Download PDF</Button>
             )}
           </div>
