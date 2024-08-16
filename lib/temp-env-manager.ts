@@ -33,31 +33,32 @@ export class TempEnvManager {
     setInterval(() => this.cleanupExpiredRepositories(), 60 * 60 * 1000); // Run every hour
   }
 
-  private getUserDir(userId: string): string {
-    const userDir = path.join(this.baseDir, userId);
+  private getUserDir(userId: string | null): string {
+    const dirName = userId || "anonymous";
+    const userDir = path.join(this.baseDir, dirName);
     if (!fs.existsSync(userDir)) {
       fs.mkdirSync(userDir, { recursive: true });
     }
     return userDir;
   }
 
-  private getRepoPath(userId: string, repoSlug: string): string {
+  private getRepoPath(userId: string | null, repoSlug: string): string {
     const userDir = this.getUserDir(userId);
-    const repoPath = path.join(userDir, repoSlug);
-
-    return repoPath;
+    return path.join(userDir, repoSlug);
   }
 
-  async createOrUpdateRepository(repoUrl: string, userId: string) {
+  async createOrUpdateRepository(repoUrl: string, userId: string | null) {
     validateGitHubUrl(repoUrl);
 
     const slug = await generateRepoSlug(repoUrl);
     const userDir = this.getUserDir(userId);
     const repoFilePath = path.join(userDir, slug);
 
-    let repository = await prismadb.repository.findFirst({
-      where: { slug, userId },
-    });
+    let repository = userId
+      ? await prismadb.repository.findFirst({
+          where: { slug, userId },
+        })
+      : null;
 
     // inner function for cloning the repository
     const cloneRepo = async () => {
@@ -83,30 +84,34 @@ export class TempEnvManager {
       }
     }
 
-    // Always update or create the repository entry in the database
-    repository = await prismadb.repository.upsert({
-      where: {
-        slug: slug,
-      },
-      update: {
-        url: repoUrl,
-        userId: userId,
-      },
-      create: {
-        slug: slug,
-        url: repoUrl,
-        userId: userId,
-      },
-    });
+    // Always update or create the repository entry in the database if userId is provided
+    if (userId) {
+      repository = await prismadb.repository.upsert({
+        where: {
+          slug: slug,
+        },
+        update: {
+          url: repoUrl,
+          userId: userId,
+        },
+        create: {
+          slug: slug,
+          url: repoUrl,
+          userId: userId,
+        },
+      });
 
-    console.log("Repository upserted:", repository);
+      console.log("Repository upserted:", repository);
+    } else {
+      repository = { slug, url: repoUrl, userId: null };
+      console.log("Anonymous repository created:", repository);
+    }
 
     return repository;
   }
 
-  repoExistsInFileSystem(slug: string, userId: string): boolean {
+  repoExistsInFileSystem(slug: string, userId: string | null): boolean {
     const repoPath = this.getRepoPath(userId, slug);
-
     const isExisting = fs.existsSync(repoPath);
 
     if (isExisting) {
@@ -119,27 +124,38 @@ export class TempEnvManager {
   async runCommand(
     repositoryId: string,
     command: string,
-    userId: string
+    userId: string | null
   ): Promise<{
     stdout: string;
     stderr: string;
     markdownContent?: string;
     fileTree?: string;
   }> {
-    const repository = await prismadb.repository.findFirst({
-      where: { slug: repositoryId, userId },
-    });
+    let repository;
+    if (userId) {
+      repository = await prismadb.repository.findFirst({
+        where: { slug: repositoryId, userId },
+      });
+    } else {
+      const repoPath = this.getRepoPath(null, repositoryId);
+      if (fs.existsSync(repoPath)) {
+        repository = { slug: repositoryId, url: "", userId: null };
+      }
+    }
 
     if (!repository) {
-      console.log(`Repository not found: ${repositoryId} for user ${userId}`);
+      console.log(
+        `Repository not found: ${repositoryId} for user ${
+          userId || "anonymous"
+        }`
+      );
       throw new Error("Repository not found for this user");
     }
 
     console.log("Running command:", command);
     console.log("Repository:", repository);
 
-    const userDir = this.getUserDir(userId);
-    const repoPath = path.join(userDir, repository.slug);
+    const repoPath = this.getRepoPath(userId, repository.slug);
 
     const repoExists = this.repoExistsInFileSystem(repository.slug, userId);
 
@@ -160,11 +176,13 @@ export class TempEnvManager {
 
     const fullCommand = `cd ${repoPath} && ${modifiedCommand} -gm -g`;
 
-    // Update last accessed time
-    await prismadb.repository.update({
-      where: { slug: repositoryId },
-      data: { updatedAt: new Date() },
-    });
+    // Update last accessed time if userId is provided
+    if (userId) {
+      await prismadb.repository.update({
+        where: { slug: repositoryId },
+        data: { updatedAt: new Date() },
+      });
+    }
 
     const result = await execAsync(fullCommand);
 
@@ -216,12 +234,32 @@ export class TempEnvManager {
       }
       await prismadb.repository.delete({ where: { slug: repo.slug } });
     }
+
+    // Cleanup anonymous repositories
+    const anonymousDir = this.getUserDir(null);
+    if (fs.existsSync(anonymousDir)) {
+      const anonymousRepos = await fs.promises.readdir(anonymousDir);
+      for (const repo of anonymousRepos) {
+        const repoPath = path.join(anonymousDir, repo);
+        const stats = await fs.promises.stat(repoPath);
+        if (stats.mtime.getTime() < expirationDate.getTime()) {
+          await fs.promises.rm(repoPath, { recursive: true, force: true });
+        }
+      }
+    }
   }
 
-  async getRepository(repositoryId: string, userId: string) {
-    const repository = await prismadb.repository.findFirst({
-      where: { slug: repositoryId, userId },
-    });
-    return repository;
+  async getRepository(repositoryId: string, userId: string | null) {
+    if (userId) {
+      return await prismadb.repository.findFirst({
+        where: { slug: repositoryId, userId },
+      });
+    } else {
+      const repoPath = this.getRepoPath(null, repositoryId);
+      if (fs.existsSync(repoPath)) {
+        return { slug: repositoryId, url: "", userId: null };
+      }
+      return null;
+    }
   }
 }

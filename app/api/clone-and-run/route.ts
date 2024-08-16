@@ -19,9 +19,6 @@ const tempEnvManager = new TempEnvManager();
 export async function POST(req: Request) {
   try {
     const { userId } = auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     console.log("userId:", userId);
 
     // getting vars from body content
@@ -55,12 +52,14 @@ export async function POST(req: Request) {
       const { stdout, stderr, markdownContent } =
         await tempEnvManager.runCommand(repo.slug, sanitizedCommand, userId);
 
-      await prismadb.run.create({
-        data: {
-          repositoryId: repo.slug,
-          output: stdout,
-        },
-      });
+      if (userId) {
+        await prismadb.run.create({
+          data: {
+            repositoryId: repo.slug,
+            output: stdout,
+          },
+        });
+      }
 
       // Strip ANSI codes from stdout and stderr
       const cleanStdout = stripAnsiCodes(stdout);
@@ -73,7 +72,7 @@ export async function POST(req: Request) {
       // Check if PDF exists
       const baseDir =
         "/Users/narn/Desktop/school/ccontext-github/temp_environments";
-      const userDir = path.join(baseDir, userId);
+      const userDir = path.join(baseDir, userId || "anonymous");
       const repoPath = path.join(userDir, repo.slug);
       const pdfPath = path.join(repoPath, "ccontext-output.pdf");
       const pdfExists = fs.existsSync(pdfPath);
