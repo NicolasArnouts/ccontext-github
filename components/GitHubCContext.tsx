@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +6,13 @@ import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import FileTree from "@/components/FileTree";
 
-const GitHubCContext = () => {
+interface GitHubCContextProps {
+  onMarkdownGenerated: (content: string) => void;
+}
+
+const GitHubCContext: React.FC<GitHubCContextProps> = ({
+  onMarkdownGenerated,
+}) => {
   const [githubUrl, setGithubUrl] = useState("");
   const [ccontextCommand, setCcontextCommand] = useState("ccontext -gm");
   const [output, setOutput] = useState("");
@@ -44,10 +48,9 @@ const GitHubCContext = () => {
       setPdfExists(response.data.pdfExists || false);
       setEnvId(response.data.repositoryId);
 
-      toast({
-        title: "Success",
-        description: "Command executed successfully.",
-      });
+      if (response.data.markdownContent) {
+        onMarkdownGenerated(response.data.markdownContent);
+      }
     } catch (error) {
       console.error("Error:", error);
       let errorMessage = "An error occurred while processing your request.";
@@ -97,6 +100,23 @@ const GitHubCContext = () => {
       toast({
         title: "Downloaded!",
         description: "PDF file has been downloaded.",
+      });
+    }
+  };
+
+  const handleChatWithAI = () => {
+    if (markdownContent) {
+      onMarkdownGenerated(markdownContent);
+      toast({
+        title: "Chat Initialized",
+        description:
+          "You can now chat with the AI about the generated content.",
+      });
+    } else {
+      toast({
+        title: "No content available",
+        description: "Please run a command to generate content first.",
+        variant: "destructive",
       });
     }
   };
@@ -159,6 +179,9 @@ const GitHubCContext = () => {
                 Download PDF
               </Button>
             )}
+            <Button onClick={handleChatWithAI} className="flex-1">
+              Chat with AI
+            </Button>
           </div>
           {markdownContent && <FileTree markdownContent={markdownContent} />}
         </div>
