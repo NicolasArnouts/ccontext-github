@@ -1,6 +1,7 @@
 import Image from "next/image";
 import GitHubCContext from "@/components/GitHubCContext";
 import CleanupButton from "@/components/cleanup-button";
+import ChatInterface from "@/components/chatbot/ChatInterface";
 
 import {
   ResizableHandle,
@@ -16,18 +17,26 @@ export default function Home() {
           Chat with any github codebase you want!
         </h2>
 
-        <ResizablePanelGroup direction="horizontal">
+        {/* <ResizablePanelGroup direction="horizontal">
           <ResizablePanel className="bg-red-100">
             <GitHubCContext />
           </ResizablePanel>
           <ResizableHandle />
-          <ResizablePanel className="bg-green-100">Two</ResizablePanel>
-        </ResizablePanelGroup>
+          <ResizablePanel className="bg-green-100">
+            <ChatInterface />
+          </ResizablePanel>
+        </ResizablePanelGroup> */}
 
-        <div className="mt-8">
+        <GitHubCContext />
+
+        <div className="bg-red-200">
+          <ChatInterface />
+        </div>
+
+        {/* <div className="mt-8">
           <h3 className="text-xl font-semibold mb-2">Admin Functions</h3>
           <CleanupButton />
-        </div>
+        </div> */}
       </div>
     </main>
   );
