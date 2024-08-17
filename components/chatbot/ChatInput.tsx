@@ -39,9 +39,10 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSubmit, disabled }) => {
           value={inputValue}
           onChange={handleInputChange}
           placeholder="Type your message..."
-          className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           disabled={disabled}
         />
+
         <button
           type="submit"
           className="absolute bg-blue-500 p-1 items-center text-white font-bold rounded-xl px-2 right-0 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
