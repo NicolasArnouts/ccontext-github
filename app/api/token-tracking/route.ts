@@ -1,69 +1,120 @@
+// app/api/token-tracking/route.ts
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { encoding_for_model } from "tiktoken";
 import prisma from "@/lib/prismadb";
 import { getClientIpAddress } from "@/lib/helpers";
 
-const MAX_ANONYMOUS_CHATS = 5;
-const ANONYMOUS_TOKEN_LIMIT = 100000;
+async function getOrCreateUserTokens(
+  userId: string | null,
+  modelId: string,
+  clientIp: string
+) {
+  if (userId) {
+    return prisma.userTokens.upsert({
+      where: { userId_modelId: { userId, modelId } },
+      update: {},
+      create: { userId, modelId, tokensLeft: 1000 }, // Initial tokens for new users
+    });
+  } else {
+    let anonymousSession = await prisma.anonymousSession.findFirst({
+      where: { ipAddress: clientIp },
+      include: { userTokens: true },
+    });
+
+    if (!anonymousSession) {
+      anonymousSession = await prisma.anonymousSession.create({
+        data: {
+          sessionId: `anon_${clientIp}`,
+          ipAddress: clientIp,
+          userTokens: {
+            create: { modelId, tokensLeft: 1000 }, // Initial tokens for new anonymous sessions
+          },
+        },
+        include: { userTokens: true },
+      });
+    }
+
+    const userTokens = anonymousSession.userTokens.find(
+      (ut) => ut.modelId === modelId
+    );
+    if (userTokens) {
+      return userTokens;
+    } else {
+      return prisma.userTokens.create({
+        data: {
+          modelId,
+          tokensLeft: 1000,
+          anonymousSessionId: anonymousSession.id,
+        },
+      });
+    }
+  }
+}
+
+export async function GET(req: Request) {
+  const { userId } = auth();
+  const { searchParams } = new URL(req.url);
+  const modelId = searchParams.get("modelId");
+
+  if (!modelId) {
+    return NextResponse.json(
+      { error: "Model ID is required" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const clientIp = getClientIpAddress(req);
+    const userTokens = await getOrCreateUserTokens(userId, modelId, clientIp);
+
+    return NextResponse.json({ remainingTokens: userTokens.tokensLeft });
+  } catch (error) {
+    console.error("Error fetching tokens:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch tokens" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(req: Request) {
   const { userId } = auth();
-  const { message } = await req.json();
-  const clientIp = getClientIpAddress(req);
+  const { message, modelId } = await req.json();
 
-  const model = "gpt-4o-mini";
-
-  let sessionId: string;
-  if (userId) {
-    sessionId = userId;
-  } else {
-    sessionId = `anon_${clientIp}`;
+  if (!modelId || !message) {
+    return NextResponse.json(
+      { error: "Model ID and message are required" },
+      { status: 400 }
+    );
   }
 
-  const encoder = encoding_for_model(model || "gpt-4o-mini");
-  const tokenCount = encoder.encode(message).length;
-  encoder.free();
+  try {
+    const clientIp = getClientIpAddress(req);
+    let userTokens = await getOrCreateUserTokens(userId, modelId, clientIp);
 
-  let session = await prisma.anonymousSession.findFirst({
-    where: { ipAddress: clientIp },
-  });
+    const estimatedTokens = message.split(" ").length; // Simple estimation
+    const hasEnoughTokens = userTokens.tokensLeft >= estimatedTokens;
 
-  if (!session) {
-    session = await prisma.anonymousSession.create({
-      data: {
-        sessionId,
-        ipAddress: clientIp,
-        chatCount: 1,
-        tokenUsage: tokenCount,
-      },
+    if (hasEnoughTokens) {
+      // Update token count
+      userTokens = await prisma.userTokens.update({
+        where: { id: userTokens.id },
+        data: {
+          tokensLeft: userTokens.tokensLeft - estimatedTokens,
+          lastRequestTime: new Date(),
+        },
+      });
+    }
+
+    return NextResponse.json({
+      success: hasEnoughTokens,
+      remainingTokens: userTokens.tokensLeft,
     });
-  } else {
-    session = await prisma.anonymousSession.update({
-      where: { id: session.id },
-      data: {
-        chatCount: { increment: 1 },
-        tokenUsage: { increment: tokenCount },
-        ipAddress: clientIp,
-      },
-    });
+  } catch (error) {
+    console.error("Error checking tokens:", error);
+    return NextResponse.json(
+      { error: "Failed to check tokens" },
+      { status: 500 }
+    );
   }
-
-  if (!userId && session.tokenUsage > ANONYMOUS_TOKEN_LIMIT) {
-    return NextResponse.json({ error: "Token limit reached" }, { status: 403 });
-  }
-
-  const remainingTokens = userId
-    ? 1000000 - session.tokenUsage // Assuming a limit for authenticated users
-    : ANONYMOUS_TOKEN_LIMIT - session.tokenUsage;
-
-  const spentTokens = userId ? session.tokenUsage : session.tokenUsage;
-
-  return NextResponse.json({
-    success: true,
-    tokenCount,
-    remainingTokens,
-    spentTokens,
-    maxTokens: userId ? 1000000 : ANONYMOUS_TOKEN_LIMIT,
-  });
 }

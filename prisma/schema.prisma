@@ -53,13 +53,12 @@ model UserSubscription {
 }
 
 model AnonymousSession {
-  id         String   @id @default(uuid())
-  sessionId  String   @unique
+  id         String       @id @default(uuid())
+  sessionId  String       @unique
   ipAddress  String
-  chatCount  Int      @default(0)
-  tokenUsage Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  userTokens UserTokens[]
 
   @@index([ipAddress])
 }
@@ -86,16 +85,20 @@ model Model {
 }
 
 model UserTokens {
-  id              String    @id @default(uuid())
-  userId          String
-  modelId         String
-  tokensLeft      Int
-  resetTimestamp  DateTime?
-  lastRequestTime DateTime?
+  id                 String            @id @default(uuid())
+  userId             String?
+  modelId            String
+  tokensLeft         Int
+  resetTimestamp     DateTime?
+  lastRequestTime    DateTime?
+  anonymousSession   AnonymousSession? @relation(fields: [anonymousSessionId], references: [id])
+  anonymousSessionId String?
 
   model Model @relation(fields: [modelId], references: [id])
 
   @@unique([userId, modelId])
+  @@unique([anonymousSessionId, modelId])
   @@index([userId])
   @@index([modelId])
+  @@index([anonymousSessionId])
 }

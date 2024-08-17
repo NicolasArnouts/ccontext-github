@@ -4,18 +4,11 @@ import { useToast } from "@/components/ui/use-toast";
 import MessageList from "@/components/chatbot/MessageList";
 import ChatInput from "@/components/chatbot/ChatInput";
 import ScrollToBottomButton from "@/components/chatbot/ScrollToBottomButton";
-import ModelSelector from "@/components/chatbot/ModelSelector";
 import { useDebounce } from "@/hooks/useDebounce";
 
 interface Message {
   role: "system" | "user" | "assistant";
   content: string;
-}
-
-interface Model {
-  id: string;
-  name: string;
-  tags: string[];
 }
 
 interface ChatInterfaceProps {
@@ -28,10 +21,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const [models, setModels] = useState<Model[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>("");
   const [tokensLeft, setTokensLeft] = useState<number | null>(null);
-  const [isLoadingModels, setIsLoadingModels] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -41,54 +31,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
       setMessages([{ role: "system", content: markdownContent }]);
     }
   }, [markdownContent]);
-
-  useEffect(() => {
-    fetchModels();
-  }, []);
-
-  useEffect(() => {
-    if (selectedModel && isSignedIn) {
-      fetchTokensLeft();
-    }
-  }, [selectedModel, isSignedIn]);
-
-  const fetchModels = async () => {
-    setIsLoadingModels(true);
-    try {
-      const response = await fetch("/api/models");
-      if (!response.ok) {
-        throw new Error("Failed to fetch models");
-      }
-      const data = await response.json();
-      setModels(data);
-      if (data.length > 0) {
-        setSelectedModel(data[0].id);
-      }
-    } catch (error) {
-      console.error("Error fetching models:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch available models",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingModels(false);
-    }
-  };
-
-  const fetchTokensLeft = async () => {
-    try {
-      const response = await fetch(`/api/user-tokens?modelId=${selectedModel}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch tokens");
-      }
-      const data = await response.json();
-      setTokensLeft(data.tokensLeft);
-    } catch (error) {
-      console.error("Error fetching tokens left:", error);
-      setTokensLeft(null);
-    }
-  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -112,11 +54,42 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
     return () => container.removeEventListener("scroll", debouncedHandleScroll);
   }, [debouncedHandleScroll]);
 
-  const handleSendMessage = async (userInput: string) => {
-    if (!selectedModel) {
+  const checkTokens = async (
+    message: string,
+    modelId: string
+  ): Promise<boolean> => {
+    try {
+      const response = await fetch("/api/token-tracking", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message, modelId }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to check tokens");
+      }
+      const data = await response.json();
+      setTokensLeft(data.remainingTokens);
+      return data.success;
+    } catch (error) {
+      console.error("Error checking tokens:", error);
       toast({
         title: "Error",
-        description: "Please select a model first",
+        description: "Failed to check token availability",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const handleSendMessage = async (userInput: string, modelId: string) => {
+    // Check if user has enough tokens
+    const hasEnoughTokens = await checkTokens(userInput, modelId);
+    if (!hasEnoughTokens) {
+      toast({
+        title: "Error",
+        description: "Not enough tokens to send this message",
         variant: "destructive",
       });
       return;
@@ -133,7 +106,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ messages: newMessages, modelId: selectedModel }),
+        body: JSON.stringify({ messages: newMessages, modelId }),
       });
 
       if (!response.ok) {
@@ -160,9 +133,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
         setMessages([...newMessages, { ...assistantMessage }]);
       }
 
-      if (isSignedIn) {
-        fetchTokensLeft(); // Update tokens left after message
-      }
+      // Update tokens after receiving the response
+      await checkTokens("", modelId);
     } catch (error) {
       console.error("Error sending message:", error);
       toast({
@@ -176,35 +148,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
     }
   };
 
-  const handleModelSelect = (modelId: string) => {
-    setSelectedModel(modelId);
-  };
-
-  if (isLoadingModels) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        Loading models...
-      </div>
-    );
-  }
-
   return (
     <div
       className="flex flex-col h-full overflow-hidden"
       ref={chatContainerRef}
     >
-      <div className="p-4 bg-gray-100 dark:bg-gray-800">
-        <ModelSelector
-          models={models}
-          selectedModel={selectedModel}
-          onModelSelect={handleModelSelect}
-        />
-        {isSignedIn && tokensLeft !== null && (
-          <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-            Tokens left: {tokensLeft}
-          </div>
-        )}
-      </div>
       <div className="relative flex-grow overflow-y-auto bg-white dark:bg-gray-900">
         <MessageList messages={messages} isLoading={isLoading} />
         <div ref={messagesEndRef} />
@@ -214,8 +162,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
           <ScrollToBottomButton onClick={scrollToBottom} />
         </div>
       )}
-      <div className="p-4 bg-gray-100 dark:bg-gray-800">
-        <ChatInput onSubmit={handleSendMessage} disabled={isLoading} />
+      <div className=" bg-gray-100 dark:bg-gray-800">
+        <ChatInput
+          onSubmit={handleSendMessage}
+          disabled={isLoading}
+          tokensLeft={tokensLeft}
+        />
       </div>
     </div>
   );
