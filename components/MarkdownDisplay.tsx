@@ -12,7 +12,7 @@ const MarkdownDisplay: React.FC<MarkdownDisplayProps> = ({ content }) => {
   const { theme } = useTheme();
 
   return (
-    <div className="markdown-content " data-color-mode={theme}>
+    <div className="markdown-content" data-color-mode={theme ? theme : "light"}>
       <MarkdownPreview
         source={content}
         style={{ backgroundColor: "transparent" }}

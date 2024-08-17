@@ -10,18 +10,20 @@ interface SystemMessageProps {
 }
 
 const SystemMessage: React.FC<SystemMessageProps> = ({ content }) => {
-  const memoizedMarkdown = useMemo(() => {
-    // return <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>;
+  // const memoizedMarkdown = useMemo(() => {
+  //   // return <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>;
 
-    return (
-      <div className="overflow-x-auto">{MarkdownDisplay({ content })}</div>
-    );
-  }, [content]);
+  //   return (
+  //     <div className="overflow-x-auto ">{MarkdownDisplay({ content })}</div>
+  //   );
+  // }, [content]);
 
   return (
     <div className="justify-start mb-4">
-      <div className="relative bg-gray-100 dark:bg-gray-800 dark:text-white rounded-lg py-2 px-4 ">
-        {memoizedMarkdown}
+      <div className="relative bg-gray-100 text-black dark:bg-gray-800 dark:text-white rounded-lg py-2 px-4 ">
+        {/* {memoizedMarkdown} */}
+
+        <div className="overflow-x-auto ">{MarkdownDisplay({ content })}</div>
       </div>
     </div>
   );

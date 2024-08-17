@@ -20,10 +20,14 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, scrollToBottom]);
+  }, [, scrollToBottom]);
 
   return (
     <div className="flex-1 p-4 space-y-4 overflow-auto relative">
+      <SystemMessage
+        content={`I am your Github CContext assistant! Ask me anything you want! <br><br>Pro tip: Enter a valid github url, and press **Start Chat**`}
+      />
+
       {messages.map((message, index) => (
         <div key={index}>
           {message.role === "user" ? (
