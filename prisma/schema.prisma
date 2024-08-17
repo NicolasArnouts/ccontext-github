@@ -52,17 +52,6 @@ model UserSubscription {
   stripeCurrentPeriodEnd DateTime? @map(name: "stripe_current_period_end")
 }
 
-model AnonymousSession {
-  id         String       @id @default(uuid())
-  sessionId  String       @unique
-  ipAddress  String
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  userTokens UserTokens[]
-
-  @@index([ipAddress])
-}
-
 model ChatMessage {
   id        String   @id @default(uuid())
   userId    String?
@@ -101,4 +90,15 @@ model UserTokens {
   @@index([userId])
   @@index([modelId])
   @@index([anonymousSessionId])
+}
+
+model AnonymousSession {
+  id         String       @id @default(uuid())
+  sessionId  String       @unique
+  ipAddress  String
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  userTokens UserTokens[]
+
+  @@index([ipAddress])
 }

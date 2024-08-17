@@ -22,6 +22,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [tokensLeft, setTokensLeft] = useState<number | null>(null);
+  const [tokensUsed, setTokensUsed] = useState<number>(0);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -32,9 +33,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
     }
   }, [markdownContent]);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, []);
 
   const handleScroll = useCallback(() => {
     const container = chatContainerRef.current;
@@ -54,66 +55,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
     return () => container.removeEventListener("scroll", debouncedHandleScroll);
   }, [debouncedHandleScroll]);
 
-  const checkTokens = async (
-    message: string,
-    modelId: string
-  ): Promise<boolean> => {
-    if (!message.trim()) {
-      return true; // Skip token check for empty messages
-    }
-
-    try {
-      const response = await fetch("/api/token-tracking", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ message, modelId }),
-      });
-      if (!response.ok) {
-        throw new Error("Failed to check tokens");
-      }
-      const data = await response.json();
-      setTokensLeft(data.remainingTokens);
-      return data.success;
-    } catch (error) {
-      console.error("Error checking tokens:", error);
-      toast({
-        title: "Error",
-        description: "Failed to check token availability",
-        variant: "destructive",
-      });
-      return false;
-    }
-  };
-
   const handleSendMessage = async (userInput: string, modelId: string) => {
-    if (!userInput.trim()) {
-      return; // Don't send empty messages
-    }
-
-    // Check if user has enough tokens
-    const hasEnoughTokens = await checkTokens(userInput, modelId);
-    if (!hasEnoughTokens) {
-      toast({
-        title: "Error",
-        description: "Not enough tokens to send this message",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!userInput.trim()) return;
 
     setIsLoading(true);
-    const message: Message = { role: "user", content: userInput };
-    const newMessages = [...messages, message];
+    const userMessage: Message = { role: "user", content: userInput };
+    const newMessages = [...messages, userMessage];
     setMessages(newMessages);
+    scrollToBottom();
 
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: newMessages, modelId }),
       });
 
@@ -123,11 +77,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
       }
 
       const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error("No reader available");
-      }
+      if (!reader) throw new Error("No reader available");
 
-      let accumulatedContent = "";
       const assistantMessage: Message = { role: "assistant", content: "" };
       setMessages([...newMessages, assistantMessage]);
 
@@ -136,13 +87,32 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
         if (done) break;
 
         const chunk = new TextDecoder().decode(value);
-        accumulatedContent += chunk;
-        assistantMessage.content = accumulatedContent;
+        assistantMessage.content += chunk;
         setMessages([...newMessages, { ...assistantMessage }]);
+        scrollToBottom();
       }
 
-      // Update tokens after receiving the response
-      await checkTokens(accumulatedContent, modelId);
+      // Get the token usage from the response headers
+      const inputTokensUsed = parseInt(
+        response.headers.get("X-Tokens-Used-Input") || "0",
+        10
+      );
+      const totalTokensUsed = parseInt(
+        response.headers.get("X-Tokens-Used-Total") || "0",
+        10
+      );
+      const finalTokensLeft = parseInt(
+        response.headers.get("X-Tokens-Left") || "0",
+        10
+      );
+
+      setTokensUsed(totalTokensUsed);
+      setTokensLeft(finalTokensLeft);
+
+      toast({
+        title: "Token Usage",
+        description: `Input: ${inputTokensUsed}, Total: ${totalTokensUsed}`,
+      });
     } catch (error) {
       console.error("Error sending message:", error);
       toast({
@@ -171,11 +141,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
         </div>
       )}
       <div className="bg-gray-100 dark:bg-gray-800">
-        <ChatInput
-          onSubmit={handleSendMessage}
-          disabled={isLoading}
-          tokensLeft={tokensLeft}
-        />
+        <div className="text-sm text-gray-500 dark:text-gray-400 p-2 flex justify-between">
+          <span>Tokens used (this interaction): {tokensUsed}</span>
+          <span>Tokens left: {tokensLeft !== null ? tokensLeft : "N/A"}</span>
+        </div>
+        <ChatInput onSubmit={handleSendMessage} disabled={isLoading} />
       </div>
     </div>
   );

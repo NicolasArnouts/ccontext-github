@@ -1,8 +1,8 @@
-// app/api/token-tracking/route.ts
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prismadb";
 import { getClientIpAddress } from "@/lib/helpers";
+import { encoding_for_model } from "tiktoken";
 
 async function getOrCreateUserTokens(
   userId: string | null,
@@ -92,23 +92,23 @@ export async function POST(req: Request) {
     const clientIp = getClientIpAddress(req);
     let userTokens = await getOrCreateUserTokens(userId, modelId, clientIp);
 
-    const estimatedTokens = message.split(" ").length; // Simple estimation
-    const hasEnoughTokens = userTokens.tokensLeft >= estimatedTokens;
-
-    if (hasEnoughTokens) {
-      // Update token count
-      userTokens = await prisma.userTokens.update({
-        where: { id: userTokens.id },
-        data: {
-          tokensLeft: userTokens.tokensLeft - estimatedTokens,
-          lastRequestTime: new Date(),
-        },
-      });
+    const model = await prisma.model.findUnique({ where: { id: modelId } });
+    if (!model) {
+      return NextResponse.json(
+        { error: "Invalid model selected" },
+        { status: 400 }
+      );
     }
+
+    const encoder = encoding_for_model("gpt-4o");
+    const tokensUsed = encoder.encode(message).length;
+
+    const hasEnoughTokens = userTokens.tokensLeft >= tokensUsed;
 
     return NextResponse.json({
       success: hasEnoughTokens,
       remainingTokens: userTokens.tokensLeft,
+      tokensUsed,
     });
   } catch (error) {
     console.error("Error checking tokens:", error);
