@@ -58,6 +58,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
     message: string,
     modelId: string
   ): Promise<boolean> => {
+    if (!message.trim()) {
+      return true; // Skip token check for empty messages
+    }
+
     try {
       const response = await fetch("/api/token-tracking", {
         method: "POST",
@@ -84,6 +88,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
   };
 
   const handleSendMessage = async (userInput: string, modelId: string) => {
+    if (!userInput.trim()) {
+      return; // Don't send empty messages
+    }
+
     // Check if user has enough tokens
     const hasEnoughTokens = await checkTokens(userInput, modelId);
     if (!hasEnoughTokens) {
@@ -134,7 +142,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
       }
 
       // Update tokens after receiving the response
-      await checkTokens("", modelId);
+      await checkTokens(accumulatedContent, modelId);
     } catch (error) {
       console.error("Error sending message:", error);
       toast({
@@ -162,7 +170,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
           <ScrollToBottomButton onClick={scrollToBottom} />
         </div>
       )}
-      <div className=" bg-gray-100 dark:bg-gray-800">
+      <div className="bg-gray-100 dark:bg-gray-800">
         <ChatInput
           onSubmit={handleSendMessage}
           disabled={isLoading}
