@@ -1,10 +1,9 @@
-"use client";
-
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import MessageList from "@/components/chatbot/MessageList";
 import ChatInput from "@/components/chatbot/ChatInput";
 import ScrollToBottomButton from "@/components/chatbot/ScrollToBottomButton";
 import { useToast } from "@/components/ui/use-toast";
+import { useScrollToBottom } from "@/hooks/useScrollToBottom";
 
 interface Message {
   role: "system" | "user" | "assistant";
@@ -16,22 +15,20 @@ interface ChatInterfaceProps {
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { showScrollButton, scrollToBottom, messagesEndRef } =
+    useScrollToBottom();
 
   useEffect(() => {
     if (markdownContent) {
-      console.log("Markdown content received:", markdownContent);
       setMessages([{ role: "system", content: markdownContent }]);
     }
   }, [markdownContent]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    scrollToBottom();
   }, [messages]);
 
   const handleSendMessage = async (userInput: string) => {
@@ -80,19 +77,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
       });
     } finally {
       setIsLoading(false);
+      scrollToBottom();
     }
   };
 
   return (
     <div className="flex flex-col h-full">
       <MessageList messages={messages} isLoading={isLoading} />
-      <div ref={scrollRef} />
-      <ChatInput onSubmit={handleSendMessage} disabled={isLoading} />
-      <ScrollToBottomButton
-        onClick={() =>
-          scrollRef.current?.scrollIntoView({ behavior: "smooth" })
-        }
-      />
+      <div ref={messagesEndRef} />
+
+      <div className="relative">
+        <ChatInput onSubmit={handleSendMessage} disabled={isLoading} />
+        <ScrollToBottomButton onClick={scrollToBottom} />
+      </div>
     </div>
   );
 };

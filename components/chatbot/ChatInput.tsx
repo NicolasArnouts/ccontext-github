@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
+import ScrollToBottomButton from "./ScrollToBottomButton";
 
 interface ChatInputProps {
   onSubmit: (message: string) => void;
