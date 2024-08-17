@@ -31,7 +31,7 @@ export default function Home() {
             </ResizablePanel>
             <ResizableHandle className="p-1 bg-gray-200 dark:bg-gray-600" />
             <ResizablePanel className="h-[85svh]">
-              {showChat ? (
+              {/* {showChat ? (
                 <div className="bg-gray-50 dark:bg-gray-600 md:rounded-none rounded-3xl h-[85svh] overflow-scroll">
                   <ChatInterface markdownContent={markdownContent} />
                 </div>
@@ -42,7 +42,11 @@ export default function Home() {
                     generated content.
                   </p>
                 </div>
-              )}
+              )} */}
+
+              <div className="bg-gray-50 dark:bg-gray-600 md:rounded-none rounded-3xl h-[85svh] overflow-scroll">
+                <ChatInterface markdownContent={markdownContent} />
+              </div>
             </ResizablePanel>
           </ResizablePanelGroup>
         </div>

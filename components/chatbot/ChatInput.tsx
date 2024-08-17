@@ -2,6 +2,8 @@
 
 import React, { useState, useCallback } from "react";
 import ScrollToBottomButton from "./ScrollToBottomButton";
+import { ArrowUp } from "lucide-react";
+import TextareaAutosize from "react-textarea-autosize";
 
 interface ChatInputProps {
   onSubmit: (message: string) => void;
@@ -30,22 +32,22 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSubmit, disabled }) => {
   );
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 shadow-md">
-      <div className="flex">
-        <input
+    <form onSubmit={handleSubmit} className=" shadow-md">
+      <div className="relative flex p-2 bg-red-200">
+        <TextareaAutosize
           type="text"
           value={inputValue}
           onChange={handleInputChange}
           placeholder="Type your message..."
-          className="flex-1 p-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={disabled}
         />
         <button
           type="submit"
-          className="bg-blue-500 text-white font-bold px-4 py-2 rounded-r-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          className="absolute bg-blue-500 p-1 items-center text-white font-bold rounded-xl px-2 right-0 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
           disabled={disabled}
         >
-          Send
+          <ArrowUp className="h-6 w-6 " />
         </button>
       </div>
     </form>

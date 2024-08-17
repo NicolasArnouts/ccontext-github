@@ -114,14 +114,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
       className="flex flex-col h-full overflow-hidden"
       ref={chatContainerRef}
     >
-      <div className="flex-grow overflow-y-auto">
+      <div className="relative flex-grow overflow-y-auto bg-blue-200">
+        <div className="absolute bottom-1 right-1">
+          <ScrollToBottomButton onClick={scrollToBottom} />
+        </div>
         <MessageList messages={messages} isLoading={isLoading} />
         <div ref={messagesEndRef} />
       </div>
 
       <div className="relative">
         <ChatInput onSubmit={handleSendMessage} disabled={isLoading} />
-        <ScrollToBottomButton onClick={scrollToBottom} />
       </div>
     </div>
   );
