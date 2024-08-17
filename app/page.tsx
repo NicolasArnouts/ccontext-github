@@ -3,6 +3,7 @@
 import { useState } from "react";
 import GitHubCContext from "@/components/GitHubCContext";
 import ChatInterface from "@/components/chatbot/ChatInterface";
+import { useGithubCContextStore } from "@/lib/store";
 
 import {
   ResizableHandle,
@@ -11,8 +12,8 @@ import {
 } from "@/components/ui/resizable";
 
 export default function Home() {
-  const [markdownContent, setMarkdownContent] = useState<string | null>("");
   const [showChat, setShowChat] = useState(false);
+  const { setMarkdownContent } = useGithubCContextStore();
 
   const handleMarkdownGenerated = (content: string) => {
     setMarkdownContent(content);
@@ -34,21 +35,8 @@ export default function Home() {
             </ResizablePanel>
             <ResizableHandle className="p-1 bg-gray-200 dark:bg-gray-600" />
             <ResizablePanel className="h-[85svh] p-0 m-0">
-              {/* {showChat ? (
-                <div className="bg-gray-50 dark:bg-gray-600 md:rounded-none rounded-3xl h-[85svh] overflow-scroll">
-                  <ChatInterface markdownContent={markdownContent} />
-                </div>
-              ) : (
-                <div className="bg-gray-50 dark:bg-gray-600 md:rounded-none rounded-3xl h-[85svh] overflow-scroll flex items-center justify-center">
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Click "Chat with AI" to start a conversation about the
-                    generated content.
-                  </p>
-                </div>
-              )} */}
-
               <div className="bg-gray-50 dark:bg-gray-600 md:rounded-none rounded-3xl h-[85svh] overflow-scroll">
-                <ChatInterface markdownContent={markdownContent} />
+                <ChatInterface />
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>

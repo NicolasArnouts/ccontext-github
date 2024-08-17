@@ -5,24 +5,23 @@ import MessageList from "@/components/chatbot/MessageList";
 import ChatInput from "@/components/chatbot/ChatInput";
 import ScrollToBottomButton from "@/components/chatbot/ScrollToBottomButton";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useGithubCContextStore } from "@/lib/store";
 
 interface Message {
   role: "system" | "user" | "assistant";
   content: string;
 }
 
-interface ChatInterfaceProps {
-  markdownContent?: string;
-}
-
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
+const ChatInterface: React.FC = () => {
   const { isLoaded, isSignedIn, user } = useUser();
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [showScrollButton, setShowScrollButton] = useState(true);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   const [tokensLeft, setTokensLeft] = useState<number | null>(null);
   const [currentModelId, setCurrentModelId] = useState<string | null>(null);
+
+  const { markdownContent } = useGithubCContextStore();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -125,22 +124,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
 
   return (
     <div
-      className=" flex flex-col h-full overflow-hidden"
+      className="flex flex-col h-full overflow-hidden"
       ref={chatContainerRef}
     >
       <div className="relative flex-grow overflow-y-auto bg-white dark:bg-gray-900">
         <MessageList messages={messages} isLoading={isLoading} />
-
         <div ref={messagesEndRef} />
       </div>
-
-      {/* {showScrollButton && ( */}
-
-      {/* )} */}
-      <div className="relative bg-gray-100 dark:bg-gray-800">
-        <div className="absolute top-0 right-0 z-50">
+      {showScrollButton && (
+        <div className="absolute bottom-16 right-4">
           <ScrollToBottomButton onClick={scrollToBottom} />
         </div>
+      )}
+      <div className="relative bg-gray-100 dark:bg-gray-800">
         <ChatInput
           onSubmit={handleSendMessage}
           isStreaming={isLoading}

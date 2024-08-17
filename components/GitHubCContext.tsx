@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import FileTree from "@/components/FileTree";
+import { useGithubCContextStore } from "@/lib/store";
 
 interface GitHubCContextProps {
   onMarkdownGenerated: (content: string) => void;
@@ -13,13 +14,23 @@ interface GitHubCContextProps {
 const GitHubCContext: React.FC<GitHubCContextProps> = ({
   onMarkdownGenerated,
 }) => {
-  const [githubUrl, setGithubUrl] = useState("");
-  const [ccontextCommand, setCcontextCommand] = useState("ccontext -gm");
-  const [output, setOutput] = useState("");
-  const [markdownContent, setMarkdownContent] = useState<string | null>(null);
-  const [pdfExists, setPdfExists] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [envId, setEnvId] = useState<string | null>(null);
+  const {
+    githubUrl,
+    ccontextCommand,
+    output,
+    markdownContent,
+    pdfExists,
+    isLoading,
+    envId,
+    setGithubUrl,
+    setCcontextCommand,
+    setOutput,
+    setMarkdownContent,
+    setPdfExists,
+    setIsLoading,
+    setEnvId,
+  } = useGithubCContextStore();
+
   const { toast } = useToast();
 
   const handleGithubUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,11 +114,6 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
   const handleChatWithAI = () => {
     if (markdownContent) {
       onMarkdownGenerated(markdownContent);
-      // toast({
-      //   title: "Chat Initialized",
-      //   description:
-      //     "You can now chat with the AI about the generated content.",
-      // });
     } else {
       toast({
         title: "No content available",
