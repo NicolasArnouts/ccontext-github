@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -135,12 +137,14 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
     <div className="space-y-4">
       <Input
         placeholder="Enter GitHub URL"
+        id="github-url"
         value={githubUrl}
         onChange={handleGithubUrlChange}
         className="bg-background text-foreground"
       />
       <Input
         placeholder="CContext command"
+        id="ccontext-command"
         value={ccontextCommand}
         onChange={handleCcontextCommandChange}
         className="bg-background text-foreground"

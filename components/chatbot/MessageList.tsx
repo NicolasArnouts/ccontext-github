@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useEffect } from "react";
 import UserMessage from "@/components/chatbot/UserMessage";
 import SystemMessage from "@/components/chatbot/SystemMessage";
 
@@ -13,6 +15,10 @@ interface MessageListProps {
 }
 
 const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
+  useEffect(() => {
+    console.log("Messages updated:", messages);
+  }, [messages]);
+
   return (
     <div className="flex-1 p-4 space-y-4 overflow-auto">
       {messages.map((message, index) => (

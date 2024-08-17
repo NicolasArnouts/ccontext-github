@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useCallback, useState } from "react";
-import { useUser } from "@clerk/nextjs";
-import axios from "axios";
+"use client";
+
+import React, { useEffect, useRef } from "react";
+import { useChat } from "ai/react";
 import MessageList from "@/components/chatbot/MessageList";
 import ChatInput from "@/components/chatbot/ChatInput";
 import ScrollToBottomButton from "@/components/chatbot/ScrollToBottomButton";
@@ -10,68 +11,46 @@ interface ChatInterfaceProps {
   markdownContent?: string;
 }
 
-interface Message {
-  role: string;
-  content: string;
-}
-
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
-  const { user } = useUser();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (markdownContent) {
-      const systemMessage: Message = {
-        role: "system",
-        content: markdownContent,
-      };
-      setMessages([systemMessage]);
-    }
-  }, [markdownContent]);
-
-  const handleSubmit = useCallback(
-    async (content: string) => {
-      setIsLoading(true);
-      try {
-        const newMessage: Message = {
-          role: "user",
-          content,
-        };
-
-        setMessages((prevMessages) => [...prevMessages, newMessage]);
-
-        const response = await axios.post("/api/chat", {
-          messages: [...messages, newMessage],
-        });
-
-        const aiMessage: Message = {
-          role: "assistant",
-          content: response.data,
-        };
-
-        setMessages((prevMessages) => [...prevMessages, aiMessage]);
-      } catch (error) {
+  const { messages, append, reload, stop, isLoading, input, setInput } =
+    useChat({
+      api: "/api/chat",
+      onError: (error) => {
         console.error("Error sending message:", error);
         toast({
           title: "Error",
           description: "Failed to send message",
           variant: "destructive",
         });
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [messages, toast]
-  );
+      },
+    });
+
+  useEffect(() => {
+    if (markdownContent) {
+      console.log("Markdown content received:", markdownContent);
+      append({
+        role: "system",
+        content: markdownContent,
+      });
+    }
+  }, [markdownContent, append]);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+  const handleSubmit = async (userInput: string) => {
+    console.log("Submitting message:", userInput);
+    await append({
+      role: "user",
+      content: userInput,
+    });
+  };
 
   return (
     <div className="flex flex-col h-full">

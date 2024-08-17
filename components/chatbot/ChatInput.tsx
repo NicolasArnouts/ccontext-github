@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { useDebounce } from "@/hooks/useDebounce";
 
 interface ChatInputProps {
   onSubmit: (message: string) => void;
@@ -10,7 +9,6 @@ interface ChatInputProps {
 
 const ChatInput: React.FC<ChatInputProps> = ({ onSubmit, disabled }) => {
   const [inputValue, setInputValue] = useState("");
-  const debouncedInputValue = useDebounce(inputValue, 300);
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -23,7 +21,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSubmit, disabled }) => {
     (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       if (inputValue.trim() && !disabled) {
-        onSubmit(inputValue);
+        onSubmit(inputValue.trim());
         setInputValue("");
       }
     },
