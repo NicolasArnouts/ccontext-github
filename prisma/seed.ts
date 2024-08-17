@@ -1,20 +1,32 @@
+// prisma/seed.ts
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 async function main() {
   try {
-    // Add any initial data seeding here
-    // For example:
-    // await prisma.repository.create({
-    //   data: {
-    //     name: "Example Repository",
-    //     url: "https://github.com/example/repo",
-    //     userId: "example-user-id",
-    //   },
-    // });
+    // Seed default models
+    const models = [
+      { name: "gpt-4o-mini", tags: ["Free"] },
+      { name: "gpt-4o", tags: ["Premium"] },
+      { name: "claude-3.5-sonnet", tags: ["Premium"] },
+    ];
 
-    console.log("Database seeded successfully");
+    for (const model of models) {
+      await prisma.model.upsert({
+        where: { name: model.name },
+        update: {},
+        create: {
+          name: model.name,
+          tags: model.tags,
+        },
+      });
+    }
+
+    console.log("Default models have been seeded");
+
+    // Add any other seeding operations here
+    // For example, seeding test users or other necessary data
   } catch (error) {
     console.error("Error seeding database:", error);
   } finally {
@@ -22,4 +34,11 @@ async function main() {
   }
 }
 
-main();
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

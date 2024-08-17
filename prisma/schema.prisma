@@ -77,3 +77,25 @@ model ChatMessage {
   @@index([sessionId])
   @@index([sessionId, order])
 }
+
+model Model {
+  id         String       @id @default(uuid())
+  name       String       @unique
+  tags       String[]
+  userTokens UserTokens[]
+}
+
+model UserTokens {
+  id              String    @id @default(uuid())
+  userId          String
+  modelId         String
+  tokensLeft      Int
+  resetTimestamp  DateTime?
+  lastRequestTime DateTime?
+
+  model Model @relation(fields: [modelId], references: [id])
+
+  @@unique([userId, modelId])
+  @@index([userId])
+  @@index([modelId])
+}
