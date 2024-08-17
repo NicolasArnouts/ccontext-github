@@ -162,16 +162,6 @@ export async function POST(req: Request) {
             },
           });
         }
-
-        // Add final token counts to response headers
-        responseHeaders.set(
-          "X-Tokens-Used-Total",
-          (inputTokens + responseTokens).toString()
-        );
-        responseHeaders.set(
-          "X-Tokens-Left",
-          updatedUserTokens.tokensLeft.toString()
-        );
       },
     });
 

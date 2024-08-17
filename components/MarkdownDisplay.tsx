@@ -9,7 +9,7 @@ interface MarkdownDisplayProps {
 
 const MarkdownDisplay: React.FC<MarkdownDisplayProps> = ({ content }) => {
   return (
-    <div className="markdown-content">
+    <div className="markdown-content " data-color-mode="dark">
       <MarkdownPreview
         source={content}
         style={{ backgroundColor: "transparent" }}

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, use } from "react";
 import { ArrowUp } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import ModelSelector from "./ModelSelector";
@@ -7,16 +7,22 @@ import { useToast } from "@/components/ui/use-toast";
 
 interface ChatInputProps {
   onSubmit: (message: string, modelId: string) => void;
-  disabled?: boolean;
+  isStreaming?: boolean;
+  tokensLeft: number | null;
+  onTokensUpdated: (tokens: number) => void;
 }
 
-const ChatInput: React.FC<ChatInputProps> = ({ onSubmit, disabled }) => {
+const ChatInput: React.FC<ChatInputProps> = ({
+  onSubmit,
+  isStreaming,
+  tokensLeft,
+  onTokensUpdated,
+}) => {
   const [inputValue, setInputValue] = useState("");
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [models, setModels] = useState<Model[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(true);
   const [isCheckingTokens, setIsCheckingTokens] = useState(false);
-  const [tokensLeft, setTokensLeft] = useState<number | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -28,6 +34,26 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSubmit, disabled }) => {
       fetchTokensLeft();
     }
   }, [selectedModel]);
+
+  useEffect(() => {
+    console.log("isStreaming", isStreaming);
+
+    fetchTokensLeft();
+  }, [isStreaming]);
+
+  const fetchTokensLeft = async () => {
+    try {
+      const response = await fetch(
+        `/api/token-tracking?modelId=${selectedModel}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        onTokensUpdated(data.remainingTokens);
+      }
+    } catch (error) {
+      console.error("Error fetching tokens left:", error);
+    }
+  };
 
   const fetchModels = async () => {
     setIsLoadingModels(true);
@@ -53,20 +79,6 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSubmit, disabled }) => {
     }
   };
 
-  const fetchTokensLeft = async () => {
-    try {
-      const response = await fetch(
-        `/api/token-tracking?modelId=${selectedModel}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setTokensLeft(data.remainingTokens);
-      }
-    } catch (error) {
-      console.error("Error fetching tokens left:", error);
-    }
-  };
-
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setInputValue(e.target.value);
@@ -88,7 +100,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSubmit, disabled }) => {
         throw new Error("Failed to check tokens");
       }
       const data = await response.json();
-      setTokensLeft(data.remainingTokens);
+      onTokensUpdated(data.remainingTokens);
       return data.success;
     } catch (error) {
       console.error("Error checking tokens:", error);
@@ -106,7 +118,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSubmit, disabled }) => {
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      if (inputValue.trim() && !disabled && selectedModel) {
+      if (inputValue.trim() && selectedModel) {
         const hasEnoughTokens = await checkTokens(
           inputValue.trim(),
           selectedModel
@@ -114,8 +126,6 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSubmit, disabled }) => {
         if (hasEnoughTokens) {
           onSubmit(inputValue.trim(), selectedModel);
           setInputValue("");
-          // Refresh token count after sending a message
-          fetchTokensLeft();
         } else {
           toast({
             title: "Insufficient Tokens",
@@ -125,7 +135,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSubmit, disabled }) => {
         }
       }
     },
-    [inputValue, onSubmit, disabled, selectedModel, toast]
+    [inputValue, onSubmit, isStreaming, selectedModel, toast]
   );
 
   return (
@@ -137,12 +147,12 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSubmit, disabled }) => {
             onChange={handleInputChange}
             placeholder="Type your message..."
             className="p-2 max-h-[40dvh] w-full border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            disabled={disabled || isCheckingTokens}
+            // disabled={isStreaming || isCheckingTokens}
           />
           <button
             type="submit"
             className="absolute right-4 bottom-4 bg-blue-500 p-2 text-white font-bold rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
-            disabled={disabled || !selectedModel || isCheckingTokens}
+            disabled={isStreaming || !selectedModel || isCheckingTokens}
           >
             <ArrowUp className="h-5 w-5" />
           </button>

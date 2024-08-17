@@ -22,7 +22,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [tokensLeft, setTokensLeft] = useState<number | null>(null);
-  const [tokensUsed, setTokensUsed] = useState<number>(0);
+  const [currentModelId, setCurrentModelId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -55,10 +55,26 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
     return () => container.removeEventListener("scroll", debouncedHandleScroll);
   }, [debouncedHandleScroll]);
 
+  const updateTokensLeft = useCallback(async () => {
+    if (!currentModelId) return;
+
+    try {
+      const response = await fetch(
+        `/api/token-tracking?modelId=${currentModelId}`
+      );
+      if (!response.ok) throw new Error("Failed to fetch updated token count");
+      const data = await response.json();
+      setTokensLeft(data.remainingTokens);
+    } catch (error) {
+      console.error("Error updating tokens left:", error);
+    }
+  }, [currentModelId]);
+
   const handleSendMessage = async (userInput: string, modelId: string) => {
     if (!userInput.trim()) return;
 
     setIsLoading(true);
+    setCurrentModelId(modelId);
     const userMessage: Message = { role: "user", content: userInput };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
@@ -92,27 +108,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
         scrollToBottom();
       }
 
-      // Get the token usage from the response headers
-      const inputTokensUsed = parseInt(
-        response.headers.get("X-Tokens-Used-Input") || "0",
-        10
-      );
-      const totalTokensUsed = parseInt(
-        response.headers.get("X-Tokens-Used-Total") || "0",
-        10
-      );
-      const finalTokensLeft = parseInt(
-        response.headers.get("X-Tokens-Left") || "0",
-        10
-      );
-
-      setTokensUsed(totalTokensUsed);
-      setTokensLeft(finalTokensLeft);
-
-      toast({
-        title: "Token Usage",
-        description: `Input: ${inputTokensUsed}, Total: ${totalTokensUsed}`,
-      });
+      // Update tokens left after the stream is complete
+      await updateTokensLeft();
     } catch (error) {
       console.error("Error sending message:", error);
       toast({
@@ -141,11 +138,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
         </div>
       )}
       <div className="bg-gray-100 dark:bg-gray-800">
-        <div className="text-sm text-gray-500 dark:text-gray-400 p-2 flex justify-between">
-          <span>Tokens used (this interaction): {tokensUsed}</span>
-          <span>Tokens left: {tokensLeft !== null ? tokensLeft : "N/A"}</span>
-        </div>
-        <ChatInput onSubmit={handleSendMessage} disabled={isLoading} />
+        <ChatInput
+          onSubmit={handleSendMessage}
+          isStreaming={isLoading}
+          tokensLeft={tokensLeft}
+          onTokensUpdated={setTokensLeft}
+        />
       </div>
     </div>
   );
