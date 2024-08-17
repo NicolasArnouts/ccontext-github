@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import axios from "axios";
-import { ChatMessage } from "@prisma/client";
 import MessageList from "@/components/chatbot/MessageList";
 import ChatInput from "@/components/chatbot/ChatInput";
 import ScrollToBottomButton from "@/components/chatbot/ScrollToBottomButton";
@@ -11,77 +10,49 @@ interface ChatInterfaceProps {
   markdownContent?: string;
 }
 
+interface Message {
+  role: string;
+  content: string;
+}
+
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
   const { user } = useUser();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const fetchChatHistory = useCallback(async () => {
-    if (!user) return;
-    try {
-      const response = await axios.get("/api/chat-history");
-      setMessages(response.data.messages);
-    } catch (error) {
-      console.error("Failed to fetch chat history:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load chat history",
-        variant: "destructive",
-      });
-    }
-  }, [user, toast]);
-
-  useEffect(() => {
-    fetchChatHistory();
-  }, [fetchChatHistory]);
-
   useEffect(() => {
     if (markdownContent) {
-      const systemMessage: Omit<ChatMessage, "id" | "createdAt"> = {
+      const systemMessage: Message = {
         role: "system",
         content: markdownContent,
-        userId: user?.id || null,
-        sessionId: user?.id || "anonymous",
-        order: messages.length,
       };
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        systemMessage as ChatMessage,
-      ]);
+      setMessages([systemMessage]);
     }
-  }, [markdownContent, user, messages.length]);
+  }, [markdownContent]);
 
   const handleSubmit = useCallback(
     async (content: string) => {
-      if (!user) return;
-
       setIsLoading(true);
       try {
-        const newMessage: Omit<ChatMessage, "id" | "createdAt"> = {
+        const newMessage: Message = {
           role: "user",
           content,
-          userId: user.id,
-          sessionId: user.id,
-          order: messages.length,
         };
 
-        const response = await axios.post("/api/chat", newMessage);
-        setMessages((prevMessages) => [...prevMessages, response.data.message]);
+        setMessages((prevMessages) => [...prevMessages, newMessage]);
 
-        // Fetch AI response
-        const aiResponse = await axios.post("/api/chat", {
-          role: "assistant",
-          content: "AI response here", // Replace with actual AI integration
-          userId: user.id,
-          sessionId: user.id,
-          order: messages.length + 1,
+        const response = await axios.post("/api/chat", {
+          messages: [...messages, newMessage],
         });
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          aiResponse.data.message,
-        ]);
+
+        const aiMessage: Message = {
+          role: "assistant",
+          content: response.data,
+        };
+
+        setMessages((prevMessages) => [...prevMessages, aiMessage]);
       } catch (error) {
         console.error("Error sending message:", error);
         toast({
@@ -93,7 +64,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
         setIsLoading(false);
       }
     },
-    [messages.length, user, toast]
+    [messages, toast]
   );
 
   useEffect(() => {
@@ -104,9 +75,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
 
   return (
     <div className="flex flex-col h-full">
-      <MessageList messages={messages} />
+      <MessageList messages={messages} isLoading={isLoading} />
       <div ref={scrollRef} />
-      <ChatInput onSubmit={handleSubmit} isLoading={isLoading} />
+      <ChatInput onSubmit={handleSubmit} disabled={isLoading} />
       <ScrollToBottomButton
         onClick={() =>
           scrollRef.current?.scrollIntoView({ behavior: "smooth" })

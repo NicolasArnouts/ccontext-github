@@ -1,18 +1,22 @@
 import React from "react";
-import { ChatMessage } from "@prisma/client";
 import UserMessage from "@/components/chatbot/UserMessage";
 import SystemMessage from "@/components/chatbot/SystemMessage";
 
+interface Message {
+  role: string;
+  content: string;
+}
+
 interface MessageListProps {
-  messages: ChatMessage[];
+  messages: Message[];
   isLoading: boolean;
 }
 
 const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
   return (
     <div className="flex-1 p-4 space-y-4 overflow-auto">
-      {messages.map((message) => (
-        <div key={message.id}>
+      {messages.map((message, index) => (
+        <div key={index}>
           {message.role === "user" ? (
             <UserMessage content={message.content} />
           ) : (

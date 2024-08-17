@@ -11,109 +11,120 @@ const MAX_ANONYMOUS_CHATS = 5;
 export const maxDuration = 120;
 
 export async function POST(req: Request) {
-  const { userId } = auth();
-  const { messages, model } = await req.json();
+  try {
+    const { userId } = auth();
+    const { messages } = await req.json();
 
-  const clientIp = getClientIpAddress(req);
-  const sessionId = userId || `anon_${clientIp}`;
+    const model = "gpt-4o-mini";
 
-  let session;
-  if (!userId) {
-    session = await prisma.anonymousSession.upsert({
-      where: { sessionId },
-      update: {},
-      create: {
-        sessionId,
-        ipAddress: clientIp,
-      },
-    });
+    const clientIp = getClientIpAddress(req);
+    const sessionId = userId || `anon_${clientIp}`;
 
-    if (session.chatCount >= MAX_ANONYMOUS_CHATS) {
-      return new Response(JSON.stringify({ error: "Chat limit reached" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
+    let session;
+    if (!userId) {
+      session = await prisma.anonymousSession.upsert({
+        where: { sessionId },
+        update: {},
+        create: {
+          sessionId,
+          ipAddress: clientIp,
+        },
       });
-    }
-  }
 
-  const encoder = encoding_for_model(model || "gpt-4");
-  const tokenCount = messages.reduce(
-    (acc: number, message: any) => acc + encoder.encode(message.content).length,
-    0
-  );
-
-  if (!userId) {
-    const updatedSession = await prisma.anonymousSession.update({
-      where: { sessionId },
-      data: {
-        tokenUsage: { increment: tokenCount },
-        chatCount: { increment: 1 },
-      },
-    });
-
-    if (updatedSession.tokenUsage > MAX_ANONYMOUS_TOKENS) {
-      encoder.free();
-      return new Response(JSON.stringify({ error: "Token limit reached" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-  }
-
-  // Save the user's message to the database
-  await prisma.chatMessage.create({
-    data: {
-      userId: userId || null,
-      sessionId,
-      role: "user",
-      content: messages[messages.length - 1].content,
-    },
-  });
-
-  let fullResponse = "";
-
-  const stream = await streamText({
-    model: openai(model || "gpt-4"),
-    messages,
-  });
-
-  return new Response(
-    new ReadableStream({
-      async start(controller) {
-        for await (const chunk of stream) {
-          fullResponse += chunk.content;
-          controller.enqueue(chunk.content);
-        }
-        controller.close();
-
-        // Save the AI's response to the database after streaming is complete
-        await prisma.chatMessage.create({
-          data: {
-            userId: userId || null,
-            sessionId,
-            role: "assistant",
-            content: fullResponse,
-          },
+      if (session.chatCount >= MAX_ANONYMOUS_CHATS) {
+        return new Response(JSON.stringify({ error: "Chat limit reached" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
         });
-
-        // Update token usage for the AI response
-        const aiResponseTokens = encoder.encode(fullResponse).length;
-        if (!userId) {
-          await prisma.anonymousSession.update({
-            where: { sessionId },
-            data: {
-              tokenUsage: { increment: aiResponseTokens },
-            },
-          });
-        }
-
-        encoder.free();
-      },
-    }),
-    {
-      headers: {
-        "Content-Type": "text/plain",
-      },
+      }
     }
-  );
+
+    const encoder = encoding_for_model(model || "gpt-4o-mini");
+    const tokenCount = messages.reduce(
+      (acc: number, message: any) =>
+        acc + encoder.encode(message.content).length,
+      0
+    );
+
+    if (!userId) {
+      const updatedSession = await prisma.anonymousSession.update({
+        where: { sessionId },
+        data: {
+          tokenUsage: { increment: tokenCount },
+          chatCount: { increment: 1 },
+        },
+      });
+
+      if (updatedSession.tokenUsage > MAX_ANONYMOUS_TOKENS) {
+        encoder.free();
+        return new Response(JSON.stringify({ error: "Token limit reached" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    let fullResponse = "";
+
+    try {
+      const stream = await streamText({
+        model: openai(model),
+        messages,import { openai } from '@ai-sdk/openai';
+        import { streamText, convertToCoreMessages } from 'ai';
+        
+        // Allow streaming responses up to 30 seconds
+        export const maxDuration = 30;
+        
+        export async function POST(req: Request) {
+          const { messages } = await req.json();
+        
+          const result = await streamText({
+            model: openai('gpt-4-turbo'),
+            messages: convertToCoreMessages(messages),
+          });
+        
+          return result.toDataStreamResponse();
+        }
+      });
+
+      return new Response(
+        new ReadableStream({
+          async start(controller) {
+            try {
+              for await (const chunk of stream) {
+                fullResponse += chunk.content;
+                controller.enqueue(chunk.content);
+              }
+              controller.close();
+            } catch (error) {
+              console.error("Error in stream processing:", error);
+              controller.error(error);
+            } finally {
+              encoder.free();
+            }
+          },
+        }),
+        {
+          headers: {
+            "Content-Type": "text/plain",
+          },
+        }
+      );
+    } catch (streamError) {
+      console.error("Error in streamText:", streamError);
+      return new Response(
+        JSON.stringify({ error: "Error in text streaming" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+  } catch (error) {
+    console.error("Unhandled error in POST route:", error);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 }
