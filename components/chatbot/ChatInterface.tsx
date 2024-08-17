@@ -20,7 +20,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(true);
   const [tokensLeft, setTokensLeft] = useState<number | null>(null);
   const [currentModelId, setCurrentModelId] = useState<string | null>(null);
 
@@ -125,19 +125,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
 
   return (
     <div
-      className="flex flex-col h-full overflow-hidden"
+      className=" flex flex-col h-full overflow-hidden"
       ref={chatContainerRef}
     >
       <div className="relative flex-grow overflow-y-auto bg-white dark:bg-gray-900">
         <MessageList messages={messages} isLoading={isLoading} />
+
         <div ref={messagesEndRef} />
       </div>
-      {showScrollButton && (
-        <div className="absolute bottom-20 right-4">
+
+      {/* {showScrollButton && ( */}
+
+      {/* )} */}
+      <div className="relative bg-gray-100 dark:bg-gray-800">
+        <div className="absolute top-0 right-0 z-50">
           <ScrollToBottomButton onClick={scrollToBottom} />
         </div>
-      )}
-      <div className="bg-gray-100 dark:bg-gray-800">
         <ChatInput
           onSubmit={handleSendMessage}
           isStreaming={isLoading}

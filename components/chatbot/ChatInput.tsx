@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, use } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { ArrowUp } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import ModelSelector from "./ModelSelector";
@@ -37,7 +37,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   useEffect(() => {
     console.log("isStreaming", isStreaming);
-
     fetchTokensLeft();
   }, [isStreaming]);
 
@@ -86,6 +85,16 @@ const ChatInput: React.FC<ChatInputProps> = ({
     []
   );
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSubmit(e);
+      }
+    },
+    [inputValue, selectedModel]
+  );
+
   const checkTokens = async (message: string, modelId: string) => {
     setIsCheckingTokens(true);
     try {
@@ -116,7 +125,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const handleSubmit = useCallback(
-    async (e: React.FormEvent<HTMLFormElement>) => {
+    async (
+      e:
+        | React.FormEvent<HTMLFormElement>
+        | React.KeyboardEvent<HTMLTextAreaElement>
+    ) => {
       e.preventDefault();
       if (inputValue.trim() && selectedModel) {
         const hasEnoughTokens = await checkTokens(
@@ -135,23 +148,23 @@ const ChatInput: React.FC<ChatInputProps> = ({
         }
       }
     },
-    [inputValue, onSubmit, isStreaming, selectedModel, toast]
+    [inputValue, onSubmit, selectedModel, toast]
   );
 
   return (
     <form onSubmit={handleSubmit} className="shadow-md">
-      <div className="relative flex flex-col p-2 bg-white dark:bg-gray-800">
+      <div className="relative flex flex-col pl-2 py-2 bg-white dark:bg-gray-800">
         <div className="relative flex flex-1 w-full">
           <TextareaAutosize
             value={inputValue}
             onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
             placeholder="Type your message..."
             className="p-2 max-h-[40dvh] w-full border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            // disabled={isStreaming || isCheckingTokens}
           />
           <button
             type="submit"
-            className="absolute right-4 bottom-4 bg-blue-500 p-2 text-white font-bold rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="bottom-2 bg-blue-500 p-2 text-white font-bold rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
             disabled={isStreaming || !selectedModel || isCheckingTokens}
           >
             <ArrowUp className="h-5 w-5" />
