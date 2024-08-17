@@ -1,4 +1,3 @@
-// app/api/download-pdf/route.ts
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
@@ -6,9 +5,6 @@ import { auth } from "@clerk/nextjs/server";
 
 export async function GET(request: Request) {
   const { userId } = auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   const { searchParams } = new URL(request.url);
   const envId = searchParams.get("envId");
@@ -22,7 +18,7 @@ export async function GET(request: Request) {
 
   const baseDir =
     "/Users/narn/Desktop/school/ccontext-github/temp_environments";
-  const userDir = path.join(baseDir, userId);
+  const userDir = path.join(baseDir, userId || "anonymous");
   const repoPath = path.join(userDir, envId);
   const pdfPath = path.join(repoPath, "ccontext-output.pdf");
 

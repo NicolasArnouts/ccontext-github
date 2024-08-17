@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,10 +47,6 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
       setMarkdownContent(response.data.markdownContent || null);
       setPdfExists(response.data.pdfExists || false);
       setEnvId(response.data.repositoryId);
-
-      if (response.data.markdownContent) {
-        onMarkdownGenerated(response.data.markdownContent);
-      }
     } catch (error) {
       console.error("Error:", error);
       let errorMessage = "An error occurred while processing your request.";
@@ -108,22 +102,12 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
 
   const handleChatWithAI = () => {
     if (markdownContent) {
-      // Send markdown content as a system message
       onMarkdownGenerated(markdownContent);
-
-      // Simulate sending the content to the AI and getting a response
-      // In a real scenario, you'd make an API call here
-      setTimeout(() => {
-        const aiResponse =
-          "I've received the markdown content. How can I help you with it?";
-        setOutput(aiResponse);
-      }, 1000);
-
-      toast({
-        title: "Chat Initialized",
-        description:
-          "You can now chat with the AI about the generated content.",
-      });
+      // toast({
+      //   title: "Chat Initialized",
+      //   description:
+      //     "You can now chat with the AI about the generated content.",
+      // });
     } else {
       toast({
         title: "No content available",
