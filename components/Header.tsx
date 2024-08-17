@@ -1,3 +1,5 @@
+"use client";
+
 // components/Header.tsx
 import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { ModeToggle } from "@/components/ModeToggle";

@@ -5,7 +5,7 @@ import prisma from "@/lib/prismadb";
 import { getClientIpAddress } from "@/lib/helpers";
 
 const MAX_ANONYMOUS_CHATS = 5;
-const ANONYMOUS_TOKEN_LIMIT = 300000;
+const ANONYMOUS_TOKEN_LIMIT = 100000;
 
 export async function POST(req: Request) {
   const { userId } = auth();
@@ -45,12 +45,9 @@ export async function POST(req: Request) {
       data: {
         chatCount: { increment: 1 },
         tokenUsage: { increment: tokenCount },
+        ipAddress: clientIp,
       },
     });
-  }
-
-  if (!userId && session.chatCount > MAX_ANONYMOUS_CHATS) {
-    return NextResponse.json({ error: "Chat limit reached" }, { status: 403 });
   }
 
   if (!userId && session.tokenUsage > ANONYMOUS_TOKEN_LIMIT) {
