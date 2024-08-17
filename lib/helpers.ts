@@ -164,3 +164,11 @@ export function extractFileTreeFromOutput(output: string): string | null {
   const fileTree = output.substring(startIndex, endIndex).trim();
   return fileTree;
 }
+
+export function getClientIpAddress(req: Request): string {
+  const forwardedFor = req.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    return forwardedFor.split(",")[0].trim();
+  }
+  return "127.0.0.1"; // Fallback to localhost if no IP is found
+}

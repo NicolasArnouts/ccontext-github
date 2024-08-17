@@ -25,7 +25,7 @@ model Repository {
   runs Run[]
 
   @@index([userId])
-  @@index([slug]) // Add an index on the slug field for faster lookups
+  @@index([slug])
 }
 
 model Run {
@@ -55,8 +55,11 @@ model UserSubscription {
 model AnonymousSession {
   id         String   @id @default(uuid())
   sessionId  String   @unique
+  ipAddress  String
   chatCount  Int      @default(0)
   tokenUsage Int      @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([ipAddress])
 }
