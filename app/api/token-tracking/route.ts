@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   const { message } = await req.json();
   const clientIp = getClientIpAddress(req);
 
-  const model = "gpt-4o";
+  const model = "gpt-4o-mini";
 
   let sessionId: string;
   if (userId) {
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     sessionId = `anon_${clientIp}`;
   }
 
-  const encoder = encoding_for_model(model || "gpt-4o");
+  const encoder = encoding_for_model(model || "gpt-4o-mini");
   const tokenCount = encoder.encode(message).length;
   encoder.free();
 
