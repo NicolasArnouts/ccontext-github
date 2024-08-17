@@ -1,9 +1,15 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useLayoutEffect,
+  useCallback,
+} from "react";
 import MessageList from "@/components/chatbot/MessageList";
 import ChatInput from "@/components/chatbot/ChatInput";
 import ScrollToBottomButton from "@/components/chatbot/ScrollToBottomButton";
 import { useToast } from "@/components/ui/use-toast";
-import { useScrollToBottom } from "@/hooks/useScrollToBottom";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface Message {
   role: "system" | "user" | "assistant";
@@ -18,8 +24,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { showScrollButton, scrollToBottom, messagesEndRef } =
-    useScrollToBottom();
+  const [showScrollButton, setShowScrollButton] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -28,9 +34,31 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
     }
   }, [markdownContent]);
 
-  useEffect(() => {
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useLayoutEffect(() => {
     scrollToBottom();
-  }, [messages, scrollToBottom]);
+  }, [messages]);
+
+  const handleScroll = useCallback(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    setShowScrollButton(scrollHeight - scrollTop - clientHeight > 100);
+  }, []);
+
+  const debouncedHandleScroll = useDebounce(handleScroll, 200);
+
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    container.addEventListener("scroll", debouncedHandleScroll);
+    return () => container.removeEventListener("scroll", debouncedHandleScroll);
+  }, [debouncedHandleScroll]);
 
   const handleSendMessage = async (userInput: string) => {
     setIsLoading(true);
@@ -78,14 +106,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
       });
     } finally {
       setIsLoading(false);
-      scrollToBottom();
     }
   };
 
   return (
-    <div className="flex flex-col h-full" ref={chatContainerRef}>
-      <MessageList messages={messages} isLoading={isLoading} />
-      <div ref={messagesEndRef} />
+    <div
+      className="flex flex-col h-full overflow-hidden"
+      ref={chatContainerRef}
+    >
+      <div className="flex-grow overflow-y-auto">
+        <MessageList messages={messages} isLoading={isLoading} />
+        <div ref={messagesEndRef} />
+      </div>
 
       <div className="relative">
         <ChatInput onSubmit={handleSendMessage} disabled={isLoading} />

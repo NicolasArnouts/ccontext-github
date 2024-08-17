@@ -39,8 +39,6 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
         </div>
       )}
       <div ref={messagesEndRef} />
-
-      <ScrollToBottomButton onClick={scrollToBottom} />
     </div>
   );
 };
