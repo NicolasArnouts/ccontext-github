@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import MessageList from "@/components/chatbot/MessageList";
 import ChatInput from "@/components/chatbot/ChatInput";
 import ScrollToBottomButton from "@/components/chatbot/ScrollToBottomButton";
@@ -20,6 +20,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { showScrollButton, scrollToBottom, messagesEndRef } =
     useScrollToBottom();
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (markdownContent) {
@@ -29,7 +30,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
   const handleSendMessage = async (userInput: string) => {
     setIsLoading(true);
@@ -82,7 +83,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" ref={chatContainerRef}>
       <MessageList messages={messages} isLoading={isLoading} />
       <div ref={messagesEndRef} />
 
