@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import React from 'react';
-import MarkdownPreview from '@uiw/react-markdown-preview';
+import React from "react";
+import MarkdownPreview from "@uiw/react-markdown-preview";
 
 interface MarkdownDisplayProps {
   content: string;
@@ -10,8 +10,10 @@ interface MarkdownDisplayProps {
 const MarkdownDisplay: React.FC<MarkdownDisplayProps> = ({ content }) => {
   return (
     <div className="markdown-content">
-        <div className='bg-red-300 p-8'>alooooooo</div>
-      <MarkdownPreview source={content} />
+      <MarkdownPreview
+        source={content}
+        style={{ backgroundColor: "transparent" }}
+      />
     </div>
   );
 };
