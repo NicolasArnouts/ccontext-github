@@ -18,7 +18,6 @@ export async function POST(req: Request) {
   if (userId) {
     sessionId = userId;
   } else {
-    // For anonymous users, use IP address as the session identifier
     sessionId = `anon_${clientIp}`;
   }
 
@@ -55,13 +54,16 @@ export async function POST(req: Request) {
   }
 
   const remainingTokens = userId
-    ? 1000000 // Placeholder value for authenticated users
+    ? 1000000 - session.tokenUsage // Assuming a limit for authenticated users
     : ANONYMOUS_TOKEN_LIMIT - session.tokenUsage;
+
+  const spentTokens = userId ? session.tokenUsage : session.tokenUsage;
 
   return NextResponse.json({
     success: true,
     tokenCount,
     remainingTokens,
+    spentTokens,
     maxTokens: userId ? 1000000 : ANONYMOUS_TOKEN_LIMIT,
   });
 }

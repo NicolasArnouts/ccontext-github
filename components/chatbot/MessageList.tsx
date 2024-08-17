@@ -1,12 +1,10 @@
 import React from "react";
-import { Message } from "ai";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { ChatMessage } from "@prisma/client";
 import UserMessage from "@/components/chatbot/UserMessage";
 import SystemMessage from "@/components/chatbot/SystemMessage";
 
 interface MessageListProps {
-  messages: Message[];
+  messages: ChatMessage[];
   isLoading: boolean;
 }
 

@@ -1,133 +1,116 @@
 import React, { useEffect, useRef, useCallback, useState } from "react";
-import { useChat } from "ai/react";
 import { useUser } from "@clerk/nextjs";
 import axios from "axios";
+import { ChatMessage } from "@prisma/client";
 import MessageList from "@/components/chatbot/MessageList";
 import ChatInput from "@/components/chatbot/ChatInput";
 import ScrollToBottomButton from "@/components/chatbot/ScrollToBottomButton";
-import SignInModal from "@/components/SignInModal";
-import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ChatInterfaceProps {
   markdownContent?: string;
 }
 
-interface SessionInfo {
-  chatCount: number;
-  tokenUsage: number;
-  maxChats: number;
-  maxTokens: number;
-}
-
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ markdownContent }) => {
   const { user } = useUser();
-  const [showSignInModal, setShowSignInModal] = useState(false);
-  const { messages, append, setMessages, isLoading, error } = useChat();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const messageListRef = useRef<HTMLDivElement>(null);
-  const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
-  const [chatLimitReached, setChatLimitReached] = useState(false);
-  const [remainingTokens, setRemainingTokens] = useState<number | null>(null);
+  const { toast } = useToast();
+
+  const fetchChatHistory = useCallback(async () => {
+    if (!user) return;
+    try {
+      const response = await axios.get("/api/chat-history");
+      setMessages(response.data.messages);
+    } catch (error) {
+      console.error("Failed to fetch chat history:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load chat history",
+        variant: "destructive",
+      });
+    }
+  }, [user, toast]);
+
+  useEffect(() => {
+    fetchChatHistory();
+  }, [fetchChatHistory]);
 
   useEffect(() => {
     if (markdownContent) {
-      setMessages([
-        {
-          id: "markdown-content",
-          role: "system",
-          content: markdownContent,
-        },
+      const systemMessage: Omit<ChatMessage, "id" | "createdAt"> = {
+        role: "system",
+        content: markdownContent,
+        userId: user?.id || null,
+        sessionId: user?.id || "anonymous",
+        order: messages.length,
+      };
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        systemMessage as ChatMessage,
       ]);
     }
-  }, [markdownContent, setMessages]);
+  }, [markdownContent, user, messages.length]);
+
+  const handleSubmit = useCallback(
+    async (content: string) => {
+      if (!user) return;
+
+      setIsLoading(true);
+      try {
+        const newMessage: Omit<ChatMessage, "id" | "createdAt"> = {
+          role: "user",
+          content,
+          userId: user.id,
+          sessionId: user.id,
+          order: messages.length,
+        };
+
+        const response = await axios.post("/api/chat", newMessage);
+        setMessages((prevMessages) => [...prevMessages, response.data.message]);
+
+        // Fetch AI response
+        const aiResponse = await axios.post("/api/chat", {
+          role: "assistant",
+          content: "AI response here", // Replace with actual AI integration
+          userId: user.id,
+          sessionId: user.id,
+          order: messages.length + 1,
+        });
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          aiResponse.data.message,
+        ]);
+      } catch (error) {
+        console.error("Error sending message:", error);
+        toast({
+          title: "Error",
+          description: "Failed to send message",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [messages.length, user, toast]
+  );
 
   useEffect(() => {
-    if (scrollRef.current && messages.length > 0) {
-      scrollRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
 
-  const handleSubmit = useCallback(
-    async (message: string) => {
-      try {
-        const response = await axios.post("/api/token-tracking", {
-          message,
-          model: "gpt-3.5-turbo",
-        });
-
-        if (response.data.error === "Chat limit reached") {
-          setChatLimitReached(true);
-          setShowSignInModal(true);
-          return;
-        }
-
-        if (response.data.session) {
-          setSessionInfo(response.data.session);
-        }
-
-        setRemainingTokens(response.data.remainingTokens);
-
-        await append({
-          role: "user",
-          content: message,
-        });
-      } catch (error) {
-        console.error("Error submitting message:", error);
-        if (axios.isAxiosError(error) && error.response?.status === 403) {
-          setChatLimitReached(true);
-          setShowSignInModal(true);
-        }
-      }
-    },
-    [append]
-  );
-
-  const scrollToBottom = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
-    }
-  };
-
   return (
-    <div className="flex flex-col h-full relative">
-      {!user && remainingTokens !== null && (
-        <div className="bg-yellow-100 dark:bg-yellow-900 p-2 text-sm">
-          Anonymous Session: {remainingTokens.toLocaleString()} /{" "}
-          {sessionInfo?.maxTokens.toLocaleString()} tokens remaining
-        </div>
-      )}
-      {user && remainingTokens !== null && (
-        <div className="bg-green-100 dark:bg-green-900 p-2 text-sm">
-          Authenticated User: {remainingTokens.toLocaleString()} tokens
-          remaining
-        </div>
-      )}
-      <div className="flex-grow overflow-auto" ref={messageListRef}>
-        <MessageList messages={messages} isLoading={isLoading} />
-        <div ref={scrollRef} />
-      </div>
-      {error && <div className="text-red-500 p-2">Error: {error.message}</div>}
-      {chatLimitReached && (
-        <div className="bg-red-100 dark:bg-red-900 p-4 text-center">
-          <p className="text-lg font-semibold mb-2">Chat limit reached</p>
-          <p className="mb-4">
-            You've reached the maximum number of chats for anonymous users.
-          </p>
-          <Button onClick={() => setShowSignInModal(true)}>
-            Sign in to continue
-          </Button>
-        </div>
-      )}
-      <ScrollToBottomButton onClick={scrollToBottom} />
-      <div>
-        <ChatInput
-          onSubmit={handleSubmit}
-          disabled={isLoading || showSignInModal || chatLimitReached}
-        />
-      </div>
-      <SignInModal
-        isOpen={showSignInModal}
-        onClose={() => setShowSignInModal(false)}
+    <div className="flex flex-col h-full">
+      <MessageList messages={messages} />
+      <div ref={scrollRef} />
+      <ChatInput onSubmit={handleSubmit} isLoading={isLoading} />
+      <ScrollToBottomButton
+        onClick={() =>
+          scrollRef.current?.scrollIntoView({ behavior: "smooth" })
+        }
       />
     </div>
   );

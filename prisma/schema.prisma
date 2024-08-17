@@ -63,3 +63,17 @@ model AnonymousSession {
 
   @@index([ipAddress])
 }
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  userId    String?
+  sessionId String
+  role      String
+  content   String   @db.Text
+  order     Int
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([sessionId, order])
+}
