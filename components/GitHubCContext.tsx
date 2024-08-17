@@ -172,22 +172,24 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
           <h3 className="text-lg font-semibold mb-2 text-foreground">
             Generated Content:
           </h3>
-          <div className="flex space-x-2 mb-4">
-            {markdownContent && (
-              <Button onClick={handleDownloadMarkdown} className="flex-1">
-                Download Markdown
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {markdownContent && (
+                <Button onClick={handleDownloadMarkdown} className="flex-grow">
+                  Download Markdown
+                </Button>
+              )}
+              {pdfExists && (
+                <Button onClick={handleDownloadPdf} className="flex-grow">
+                  Download PDF
+                </Button>
+              )}
+              <Button onClick={handleChatWithAI} className="flex-grow">
+                Chat with AI
               </Button>
-            )}
-            {pdfExists && (
-              <Button onClick={handleDownloadPdf} className="flex-1">
-                Download PDF
-              </Button>
-            )}
-            <Button onClick={handleChatWithAI} className="flex-1">
-              Chat with AI
-            </Button>
+            </div>
+            {markdownContent && <FileTree markdownContent={markdownContent} />}
           </div>
-          {markdownContent && <FileTree markdownContent={markdownContent} />}
         </div>
       )}
       {envId && (
