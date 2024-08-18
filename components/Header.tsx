@@ -15,8 +15,8 @@ const Header = () => {
         </a>
 
         <div>
-          <Link href="/credit-store" className="text-sm font-medium">
-            Credit Store
+          <Link href="/token-store" className="text-sm font-medium">
+            Token Store
           </Link>
         </div>
 

@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/components/ui/use-toast";
@@ -171,8 +173,8 @@ const TokenStore = () => {
           <CardContent>
             <ul className="list-disc pl-5 space-y-2">
               <li>
-                Premium models offer advanced capabilities but use more tokens
-                per request.
+                Premium models offer advanced capabilities but are more
+                expensive.
               </li>
               <li>
                 Optimize your prompts to get better results with fewer tokens.
