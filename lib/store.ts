@@ -9,6 +9,8 @@ interface GithubCContextState {
   isLoading: boolean;
   envId: string | null;
   tokenCost: number;
+  tokensLeft: number | null;
+  selectedModel: string;
   setTokenCost: (cost: number) => void;
   setGithubUrl: (url: string) => void;
   setCcontextCommand: (command: string) => void;
@@ -17,6 +19,8 @@ interface GithubCContextState {
   setPdfExists: (exists: boolean) => void;
   setIsLoading: (isLoading: boolean) => void;
   setEnvId: (id: string | null) => void;
+  setTokensLeft: (tokens: number | null) => void;
+  setSelectedModel: (modelId: string) => void;
 }
 
 export const useGithubCContextStore = create<GithubCContextState>((set) => ({
@@ -28,6 +32,8 @@ export const useGithubCContextStore = create<GithubCContextState>((set) => ({
   isLoading: false,
   envId: null,
   tokenCost: 0,
+  tokensLeft: 0,
+  selectedModel: "",
   setTokenCost: (cost) => set({ tokenCost: cost }),
   setGithubUrl: (url) => set({ githubUrl: url }),
   setCcontextCommand: (command) => set({ ccontextCommand: command }),
@@ -36,4 +42,6 @@ export const useGithubCContextStore = create<GithubCContextState>((set) => ({
   setPdfExists: (exists) => set({ pdfExists: exists }),
   setIsLoading: (isLoading) => set({ isLoading }),
   setEnvId: (id) => set({ envId: id }),
+  setTokensLeft: (tokens) => set({ tokensLeft: tokens }),
+  setSelectedModel: (modelId) => set({ selectedModel: modelId }),
 }));

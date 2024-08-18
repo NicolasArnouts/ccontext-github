@@ -1,13 +1,16 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { ArrowUp } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import ModelSelector from "./ModelSelector";
 import { Model } from "@prisma/client";
 import { useToast } from "@/components/ui/use-toast";
+import { useGithubCContextStore } from "@/lib/store";
+import { getInputTokens, debounce } from "@/lib/helpers-client";
 
 interface ChatInputProps {
   onSubmit: (message: string, modelId: string) => void;
   isStreaming?: boolean;
+  previousMessages: string[];
   tokensLeft: number | null;
   onTokensUpdated: (tokens: number) => void;
 }
@@ -15,15 +18,18 @@ interface ChatInputProps {
 const ChatInput: React.FC<ChatInputProps> = ({
   onSubmit,
   isStreaming,
+  previousMessages,
   tokensLeft,
   onTokensUpdated,
 }) => {
   const [inputValue, setInputValue] = useState("");
-  const [selectedModel, setSelectedModel] = useState<string>("");
   const [models, setModels] = useState<Model[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(true);
   const [isCheckingTokens, setIsCheckingTokens] = useState(false);
   const { toast } = useToast();
+
+  const { tokenCost, selectedModel, setSelectedModel, setTokenCost } =
+    useGithubCContextStore();
 
   useEffect(() => {
     fetchModels();
@@ -36,7 +42,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
   }, [selectedModel]);
 
   useEffect(() => {
-    console.log("isStreaming", isStreaming);
     fetchTokensLeft();
   }, [isStreaming]);
 
@@ -78,11 +83,31 @@ const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
+  const debouncedGetInputTokens = useMemo(
+    () => debounce(getInputTokens, 1200),
+    []
+  );
+
+  const calculateTokenCost = useCallback(
+    (inputTokens: number) => {
+      const previousMessagesTokens = previousMessages.reduce((acc, message) => {
+        return acc + getInputTokens(message);
+      }, 0);
+      setTokenCost(inputTokens + previousMessagesTokens);
+    },
+    [previousMessages, setTokenCost]
+  );
+
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setInputValue(e.target.value);
+      const newInputValue = e.target.value;
+      setInputValue(newInputValue);
+
+      debouncedGetInputTokens(newInputValue).then((tokens) => {
+        calculateTokenCost(tokens);
+      });
     },
-    []
+    [debouncedGetInputTokens, calculateTokenCost]
   );
 
   const handleKeyDown = useCallback(
@@ -139,6 +164,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         if (hasEnoughTokens) {
           onSubmit(inputValue.trim(), selectedModel);
           setInputValue("");
+          setTokenCost(0); // Reset token cost after submission
         } else {
           toast({
             title: "Insufficient Tokens",
@@ -148,7 +174,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         }
       }
     },
-    [inputValue, onSubmit, selectedModel, toast]
+    [inputValue, onSubmit, selectedModel, toast, checkTokens, setTokenCost]
   );
 
   return (
@@ -184,7 +210,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
             />
           )}
           <div className="text-sm text-gray-600 dark:text-gray-300">
-            Tokens left: {tokensLeft !== null ? tokensLeft : "N/A"}
+            <div className="bg-red-200">Chat cost: {tokenCost}</div>
+            <div className="bg-blue-200">
+              Tokens left: {tokensLeft !== null ? tokensLeft : "N/A"}
+            </div>
           </div>
         </div>
       </div>

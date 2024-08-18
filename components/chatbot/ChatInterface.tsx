@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/components/ui/use-toast";
@@ -20,10 +18,15 @@ const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const [tokensLeft, setTokensLeft] = useState<number | null>(null);
-  const [currentModelId, setCurrentModelId] = useState<string | null>(null);
+  // const [selectedModel, setselectedModel] = useState<string | null>(null);
 
-  const { markdownContent } = useGithubCContextStore();
+  const {
+    markdownContent,
+    tokensLeft,
+    setTokensLeft,
+    selectedModel,
+    setSelectedModel,
+  } = useGithubCContextStore();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -57,11 +60,11 @@ const ChatInterface: React.FC = () => {
   }, [debouncedHandleScroll]);
 
   const updateTokensLeft = useCallback(async () => {
-    if (!currentModelId) return;
+    if (!selectedModel) return;
 
     try {
       const response = await fetch(
-        `/api/token-tracking?modelId=${currentModelId}`
+        `/api/token-tracking?modelId=${selectedModel}`
       );
       if (!response.ok) throw new Error("Failed to fetch updated token count");
       const data = await response.json();
@@ -69,13 +72,13 @@ const ChatInterface: React.FC = () => {
     } catch (error) {
       console.error("Error updating tokens left:", error);
     }
-  }, [currentModelId]);
+  }, [selectedModel]);
 
   const handleSendMessage = async (userInput: string, modelId: string) => {
     if (!userInput.trim()) return;
 
     setIsLoading(true);
-    setCurrentModelId(modelId);
+    setSelectedModel(modelId);
     const userMessage: Message = { role: "user", content: userInput };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
@@ -102,8 +105,6 @@ const ChatInterface: React.FC = () => {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
-        console.log("Chunk value:", value);
 
         const chunk = new TextDecoder().decode(value);
         assistantMessage.content += chunk;
@@ -144,6 +145,7 @@ const ChatInterface: React.FC = () => {
         <ChatInput
           onSubmit={handleSendMessage}
           isStreaming={isLoading}
+          previousMessages={messages.map((msg) => msg.content)}
           tokensLeft={tokensLeft}
           onTokensUpdated={setTokensLeft}
         />
