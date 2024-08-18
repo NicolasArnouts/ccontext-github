@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +37,7 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
 
   const handleGithubUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setGithubUrl(e.target.value);
+    console.log(e.target.value);
   };
 
   const handleCcontextCommandChange = (

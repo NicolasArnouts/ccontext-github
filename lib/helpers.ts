@@ -1,5 +1,8 @@
 import axios from "axios";
 import path from "path";
+import prisma from "@/lib/prismadb";
+import { ChatMessage } from "@prisma/client";
+import { encoding_for_model } from "tiktoken";
 
 /**
  * Sanitizes input by removing potentially harmful characters.
@@ -171,4 +174,73 @@ export function getClientIpAddress(req: Request): string {
     return forwardedFor.split(",")[0].trim();
   }
   return "127.0.0.1"; // Fallback to localhost if no IP is found
+}
+
+export async function getOrCreateUserTokens(
+  userId: string | null,
+  modelId: string,
+  clientIp: string
+) {
+  if (userId) {
+    // userId is found
+    return prisma.userTokens.upsert({
+      where: { userId_modelId: { userId, modelId } },
+      update: {},
+      create: { userId, modelId, tokensLeft: 1000 },
+    });
+  } else {
+    let anonymousSession = await prisma.anonymousSession.findFirst({
+      where: { ipAddress: clientIp },
+      include: { userTokens: true },
+    });
+
+    if (!anonymousSession) {
+      anonymousSession = await prisma.anonymousSession.create({
+        data: {
+          sessionId: `anon_${clientIp}`,
+          ipAddress: clientIp,
+          userTokens: {
+            create: { modelId, tokensLeft: 1000 },
+          },
+        },
+        include: { userTokens: true },
+      });
+    }
+
+    const userTokens = anonymousSession.userTokens.find(
+      (ut) => ut.modelId === modelId
+    );
+    if (userTokens) {
+      return userTokens;
+    } else {
+      return prisma.userTokens.create({
+        data: {
+          modelId,
+          tokensLeft: 1000,
+          anonymousSessionId: anonymousSession.id,
+        },
+      });
+    }
+  }
+}
+
+export function getInputTokens(
+  messages: ChatMessage | ChatMessage[] | string
+): number {
+  const encoder = encoding_for_model("gpt-4o-mini");
+
+  // inner function for processing a single message
+  const processMessage = (message: ChatMessage): number => {
+    return encoder.encode(message.content).length;
+  };
+
+  console.log("messages", messages);
+
+  if (typeof messages === "string") {
+    return encoder.encode(messages).length;
+  } else if (Array.isArray(messages)) {
+    return messages.reduce((acc, message) => acc + processMessage(message), 0);
+  } else {
+    return processMessage(messages);
+  }
 }

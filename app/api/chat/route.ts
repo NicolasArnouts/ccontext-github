@@ -3,67 +3,15 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prismadb";
 import { encoding_for_model } from "tiktoken";
-import { getClientIpAddress } from "@/lib/helpers";
+import {
+  getClientIpAddress,
+  getInputTokens,
+  getOrCreateUserTokens,
+} from "@/lib/helpers";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-// Debounce function
-function debounce(func: Function, wait: number) {
-  let timeout: NodeJS.Timeout;
-  return function (...args: any[]) {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-}
-
-async function getOrCreateUserTokens(
-  userId: string | null,
-  modelId: string,
-  clientIp: string
-) {
-  if (userId) {
-    return prisma.userTokens.upsert({
-      where: { userId_modelId: { userId, modelId } },
-      update: {},
-      create: { userId, modelId, tokensLeft: 1000 },
-    });
-  } else {
-    let anonymousSession = await prisma.anonymousSession.findFirst({
-      where: { ipAddress: clientIp },
-      include: { userTokens: true },
-    });
-
-    if (!anonymousSession) {
-      anonymousSession = await prisma.anonymousSession.create({
-        data: {
-          sessionId: `anon_${clientIp}`,
-          ipAddress: clientIp,
-          userTokens: {
-            create: { modelId, tokensLeft: 1000 },
-          },
-        },
-        include: { userTokens: true },
-      });
-    }
-
-    const userTokens = anonymousSession.userTokens.find(
-      (ut) => ut.modelId === modelId
-    );
-    if (userTokens) {
-      return userTokens;
-    } else {
-      return prisma.userTokens.create({
-        data: {
-          modelId,
-          tokensLeft: 1000,
-          anonymousSessionId: anonymousSession.id,
-        },
-      });
-    }
-  }
-}
 
 export async function POST(req: Request) {
   const { userId } = auth();
@@ -88,10 +36,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const encoder = encoding_for_model("gpt-4");
+    const encoder = encoding_for_model("gpt-4o-mini");
     const inputTokens = messages.reduce((acc, message) => {
       return acc + encoder.encode(message.content).length;
     }, 0);
+
+    console.log("inputTokens", inputTokens);
 
     if (userTokens.tokensLeft < inputTokens) {
       return NextResponse.json(
@@ -140,6 +90,7 @@ export async function POST(req: Request) {
     const tokenUpdateStream = new TransformStream({
       async flush(controller) {
         // console.log("after the stream is complete");
+        console.log("responseTokens", responseTokens);
 
         // Update tokens for the response after streaming is complete
         const updatedUserTokens = await prisma.userTokens.update({

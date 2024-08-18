@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/components/ui/use-toast";
@@ -101,6 +103,8 @@ const ChatInterface: React.FC = () => {
         const { done, value } = await reader.read();
         if (done) break;
 
+        console.log("Chunk value:", value);
+
         const chunk = new TextDecoder().decode(value);
         assistantMessage.content += chunk;
         setMessages([...newMessages, { ...assistantMessage }]);
@@ -124,19 +128,19 @@ const ChatInterface: React.FC = () => {
 
   return (
     <div
-      className="flex flex-col h-full overflow-hidden"
+      className="relative flex flex-col h-full overflow-hidden"
       ref={chatContainerRef}
     >
       <div className="relative flex-grow overflow-y-auto bg-white dark:bg-gray-900">
         <MessageList messages={messages} isLoading={isLoading} />
         <div ref={messagesEndRef} />
       </div>
-      {showScrollButton && (
-        <div className="absolute bottom-16 right-4">
+
+      <div className="relative bg-gray-100 dark:bg-gray-800">
+        <div className="absolute top-0 right-0 z-50">
           <ScrollToBottomButton onClick={scrollToBottom} />
         </div>
-      )}
-      <div className="relative bg-gray-100 dark:bg-gray-800">
+
         <ChatInput
           onSubmit={handleSendMessage}
           isStreaming={isLoading}
