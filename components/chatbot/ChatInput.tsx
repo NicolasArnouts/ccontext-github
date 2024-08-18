@@ -1,11 +1,17 @@
+"use client";
+
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { ArrowUp } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
-import ModelSelector from "./ModelSelector";
+import ModelSelector from "@/components/chatbot/ModelSelector";
 import { Model } from "@prisma/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useGithubCContextStore } from "@/lib/store";
 import { getInputTokens, debounce } from "@/lib/helpers-client";
+import SignInModal from "@/components/SignInModal";
+import OutOfTokensDialog from "@/components/OutOfTokensDialog";
+import PremiumModelDialog from "@/components/PremiumModelDialog";
+import { useUser } from "@clerk/nextjs";
 
 interface ChatInputProps {
   onSubmit: (message: string, modelId: string) => void;
@@ -26,7 +32,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [models, setModels] = useState<Model[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(true);
   const [isCheckingTokens, setIsCheckingTokens] = useState(false);
+  const [showSignInModal, setShowSignInModal] = useState(false);
+  const [showOutOfTokensDialog, setShowOutOfTokensDialog] = useState(false);
+  const [showPremiumModelDialog, setShowPremiumModelDialog] = useState(false);
   const { toast } = useToast();
+  const { isSignedIn } = useUser();
 
   const { tokenCost, selectedModel, setSelectedModel, setTokenCost } =
     useGithubCContextStore();
@@ -166,58 +176,98 @@ const ChatInput: React.FC<ChatInputProps> = ({
           setInputValue("");
           setTokenCost(0); // Reset token cost after submission
         } else {
-          toast({
-            title: "Insufficient Tokens",
-            description: "You don't have enough tokens for this request.",
-            variant: "destructive",
-          });
+          if (isSignedIn) {
+            setShowOutOfTokensDialog(true);
+          } else {
+            setShowSignInModal(true);
+          }
         }
       }
     },
-    [inputValue, onSubmit, selectedModel, toast, checkTokens, setTokenCost]
+    [inputValue, onSubmit, selectedModel, checkTokens, setTokenCost, isSignedIn]
   );
 
-  return (
-    <form onSubmit={handleSubmit} className="shadow-md">
-      <div className="relative flex flex-col pl-2 py-2 bg-white dark:bg-gray-800">
-        <div className="relative flex flex-1 w-full">
-          <TextareaAutosize
-            value={inputValue}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your message..."
-            className="p-2 max-h-[40dvh] w-full border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          />
-          <button
-            type="submit"
-            className="bottom-2 bg-blue-500 p-2 text-white font-bold rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
-            disabled={isStreaming || !selectedModel || isCheckingTokens}
-          >
-            <ArrowUp className="h-5 w-5" />
-          </button>
-        </div>
+  const handleModelSelect = (modelId: string) => {
+    const selectedModelData = models.find((model) => model.id === modelId);
+    if (selectedModelData && selectedModelData.tags.includes("Premium")) {
+      setShowPremiumModelDialog(true);
+    } else {
+      setSelectedModel(modelId);
+    }
+  };
 
-        <div className="flex justify-between items-center mt-2">
-          {isLoadingModels ? (
-            <div className="text-sm text-gray-600 dark:text-gray-300">
-              Loading models...
-            </div>
-          ) : (
-            <ModelSelector
-              models={models}
-              selectedModel={selectedModel}
-              onModelSelect={setSelectedModel}
+  const handleUpgrade = () => {
+    // Implement upgrade logic here
+    console.log("Upgrade plan");
+    // For now, we'll just close the dialog
+    setShowOutOfTokensDialog(false);
+    setShowPremiumModelDialog(false);
+  };
+
+  return (
+    <>
+      <form onSubmit={handleSubmit} className="shadow-md">
+        <div className="relative flex flex-col pl-2 py-2 bg-white dark:bg-gray-800">
+          <div className="relative flex flex-1 w-full">
+            <TextareaAutosize
+              value={inputValue}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Type your message..."
+              className="p-2 max-h-[40dvh] w-full border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
-          )}
-          <div className="text-sm text-gray-600 dark:text-gray-300">
-            <div className="bg-red-200">Chat cost: {tokenCost}</div>
-            <div className="bg-blue-200">
-              Tokens left: {tokensLeft !== null ? tokensLeft : "N/A"}
+            <button
+              type="submit"
+              className="bottom-2 bg-blue-500 p-2 text-white font-bold rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              disabled={isStreaming || !selectedModel || isCheckingTokens}
+            >
+              <ArrowUp className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="flex justify-between items-center mt-2">
+            {isLoadingModels ? (
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                Loading models...
+              </div>
+            ) : (
+              <ModelSelector
+                models={models}
+                selectedModel={selectedModel}
+                onModelSelect={handleModelSelect}
+              />
+            )}
+            <div className="text-sm text-gray-600 dark:text-gray-300">
+              <div className="bg-red-200">Chat cost: {tokenCost}</div>
+              <div className="bg-blue-200">
+                Tokens left: {tokensLeft !== null ? tokensLeft : "N/A"}
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </form>
+      </form>
+
+      <SignInModal
+        isOpen={showSignInModal}
+        onClose={() => setShowSignInModal(false)}
+      />
+
+      <OutOfTokensDialog
+        isOpen={showOutOfTokensDialog}
+        onClose={() => setShowOutOfTokensDialog(false)}
+        onUpgrade={handleUpgrade}
+      />
+
+      <PremiumModelDialog
+        isOpen={showPremiumModelDialog}
+        onClose={() => setShowPremiumModelDialog(false)}
+        onUpgrade={handleUpgrade}
+        modelName={
+          models.find((model) => model.id === selectedModel)?.name ||
+          "Premium model"
+        }
+      />
+    </>
   );
 };
 

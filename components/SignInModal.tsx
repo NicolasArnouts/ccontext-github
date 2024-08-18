@@ -1,4 +1,5 @@
-// components/SignInModal.tsx
+"use client";
+
 import React from "react";
 import { SignInButton } from "@clerk/nextjs";
 import {
@@ -7,7 +8,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -28,7 +28,7 @@ const SignInModal: React.FC<SignInModalProps> = ({ isOpen, onClose }) => {
           </DialogDescription>
         </DialogHeader>
         <SignInButton mode="modal">
-          <Button>Sign In</Button>
+          <Button onClick={onClose}>Sign In</Button>
         </SignInButton>
       </DialogContent>
     </Dialog>

@@ -1,6 +1,8 @@
 import { create } from "zustand";
+import { Model } from "@prisma/client";
 
 interface GithubCContextState {
+  // GitHub CContext related state
   githubUrl: string;
   ccontextCommand: string;
   output: string;
@@ -8,10 +10,17 @@ interface GithubCContextState {
   pdfExists: boolean;
   isLoading: boolean;
   envId: string | null;
-  tokenCost: number;
-  tokensLeft: number | null;
+
+  // Chat interface related state
   selectedModel: string;
-  setTokenCost: (cost: number) => void;
+  models: Model[];
+  messages: Message[];
+
+  // Token related state
+  tokensLeft: Record<string, number>;
+  tokenCost: number;
+
+  // GitHub CContext actions
   setGithubUrl: (url: string) => void;
   setCcontextCommand: (command: string) => void;
   setOutput: (output: string) => void;
@@ -19,11 +28,27 @@ interface GithubCContextState {
   setPdfExists: (exists: boolean) => void;
   setIsLoading: (isLoading: boolean) => void;
   setEnvId: (id: string | null) => void;
-  setTokensLeft: (tokens: number | null) => void;
+
+  // Chat interface actions
   setSelectedModel: (modelId: string) => void;
+  setModels: (models: Model[]) => void;
+  addMessage: (message: Message) => void;
+  updateLastMessage: (content: string) => void;
+  clearMessages: () => void;
+
+  // Token related actions
+  setTokensLeft: (modelId: string, amount: number) => void;
+  setTokenCost: (cost: number) => void;
+  deductTokens: (modelId: string, amount: number) => void;
+}
+
+interface Message {
+  role: "system" | "user" | "assistant";
+  content: string;
 }
 
 export const useGithubCContextStore = create<GithubCContextState>((set) => ({
+  // Initial state
   githubUrl: "",
   ccontextCommand: "ccontext -gm",
   output: "",
@@ -31,10 +56,13 @@ export const useGithubCContextStore = create<GithubCContextState>((set) => ({
   pdfExists: false,
   isLoading: false,
   envId: null,
-  tokenCost: 0,
-  tokensLeft: 0,
   selectedModel: "",
-  setTokenCost: (cost) => set({ tokenCost: cost }),
+  models: [],
+  messages: [],
+  tokensLeft: {},
+  tokenCost: 0,
+
+  // GitHub CContext actions
   setGithubUrl: (url) => set({ githubUrl: url }),
   setCcontextCommand: (command) => set({ ccontextCommand: command }),
   setOutput: (output) => set({ output }),
@@ -42,6 +70,38 @@ export const useGithubCContextStore = create<GithubCContextState>((set) => ({
   setPdfExists: (exists) => set({ pdfExists: exists }),
   setIsLoading: (isLoading) => set({ isLoading }),
   setEnvId: (id) => set({ envId: id }),
-  setTokensLeft: (tokens) => set({ tokensLeft: tokens }),
+
+  // Chat interface actions
   setSelectedModel: (modelId) => set({ selectedModel: modelId }),
+  setModels: (models) => set({ models }),
+  addMessage: (message) =>
+    set((state) => ({
+      messages: [...state.messages, message],
+    })),
+  updateLastMessage: (content) =>
+    set((state) => {
+      const updatedMessages = [...state.messages];
+      if (updatedMessages.length > 0) {
+        updatedMessages[updatedMessages.length - 1].content += content;
+      }
+      return { messages: updatedMessages };
+    }),
+  clearMessages: () => set({ messages: [] }),
+
+  // Token related actions
+  setTokensLeft: (modelId, amount) =>
+    set((state) => ({
+      tokensLeft: {
+        ...state.tokensLeft,
+        [modelId]: amount,
+      },
+    })),
+  setTokenCost: (cost) => set({ tokenCost: cost }),
+  deductTokens: (modelId, amount) =>
+    set((state) => ({
+      tokensLeft: {
+        ...state.tokensLeft,
+        [modelId]: (state.tokensLeft[modelId] || 0) - amount,
+      },
+    })),
 }));
