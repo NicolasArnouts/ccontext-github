@@ -84,7 +84,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const debouncedGetInputTokens = useMemo(
-    () => debounce(getInputTokens, 1200),
+    () => debounce(getInputTokens, 800),
     []
   );
 

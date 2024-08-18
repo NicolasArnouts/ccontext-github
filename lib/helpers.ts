@@ -170,10 +170,19 @@ export function extractFileTreeFromOutput(output: string): string | null {
 
 export function getClientIpAddress(req: Request): string {
   const forwardedFor = req.headers.get("x-forwarded-for");
+
+  let cleanedIp = "127.0.0.1";
   if (forwardedFor) {
-    return forwardedFor.split(",")[0].trim();
+    cleanedIp = forwardedFor.split(",")[0].trim();
   }
-  return "127.0.0.1"; // Fallback to localhost if no IP is found
+
+  cleanedIp = cleanIpAddress(cleanedIp);
+
+  return cleanedIp;
+}
+
+export function cleanIpAddress(ip: string): string {
+  return ip.replace(/[^a-z0-9]/gi, "").toLowerCase();
 }
 
 export async function getOrCreateUserTokens(
@@ -182,22 +191,26 @@ export async function getOrCreateUserTokens(
   clientIp: string
 ) {
   if (userId) {
-    // userId is found
+    // User is authenticated
     return prisma.userTokens.upsert({
       where: { userId_modelId: { userId, modelId } },
       update: {},
       create: { userId, modelId, tokensLeft: 1000 },
     });
   } else {
+    // User is not authenticated (anonymous session)
+    const cleanedIp = cleanIpAddress(clientIp);
+    const anonymousUserId = `anon_${cleanedIp}`;
+
     let anonymousSession = await prisma.anonymousSession.findFirst({
-      where: { ipAddress: clientIp },
+      where: { sessionId: anonymousUserId },
       include: { userTokens: true },
     });
 
     if (!anonymousSession) {
       anonymousSession = await prisma.anonymousSession.create({
         data: {
-          sessionId: `anon_${clientIp}`,
+          sessionId: anonymousUserId,
           ipAddress: clientIp,
           userTokens: {
             create: { modelId, tokensLeft: 1000 },
