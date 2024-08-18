@@ -1,3 +1,5 @@
+"use client";
+
 export function debounce<F extends (...args: any[]) => any>(
   func: F,
   waitFor: number
@@ -24,4 +26,19 @@ export function getInputTokens(input: string): number {
   console.log("getInputTokens tokens", tokens);
 
   return tokens;
+}
+
+export async function getClientIpAddress(): Promise<string> {
+  try {
+    const response = await fetch("https://api.ipify.org?format=json");
+    const data = await response.json();
+    return data.ip;
+  } catch (error) {
+    console.error("Error fetching IP address:", error);
+    return "unknown";
+  }
+}
+
+export function cleanIpAddress(ip: string): string {
+  return ip.replace(/[^a-z0-9]/gi, "").toLowerCase();
 }

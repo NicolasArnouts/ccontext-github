@@ -13,21 +13,24 @@ async function getOrCreateUserTokens(
     return prisma.userTokens.upsert({
       where: { userId_modelId: { userId, modelId } },
       update: {},
-      create: { userId, modelId, tokensLeft: 1000 }, // Initial tokens for new users
+      create: { userId, modelId, tokensLeft: 1000 },
     });
   } else {
+    const cleanIp = clientIp.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+    const anonymousId = `anon_${cleanIp}`;
+
     let anonymousSession = await prisma.anonymousSession.findFirst({
-      where: { ipAddress: clientIp },
+      where: { sessionId: anonymousId },
       include: { userTokens: true },
     });
 
     if (!anonymousSession) {
       anonymousSession = await prisma.anonymousSession.create({
         data: {
-          sessionId: `anon_${clientIp}`,
+          sessionId: anonymousId,
           ipAddress: clientIp,
           userTokens: {
-            create: { modelId, tokensLeft: 1000 }, // Initial tokens for new anonymous sessions
+            create: { modelId, tokensLeft: 1000 },
           },
         },
         include: { userTokens: true },

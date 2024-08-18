@@ -3,6 +3,8 @@ import path from "path";
 import prisma from "@/lib/prismadb";
 import { ChatMessage } from "@prisma/client";
 import { encoding_for_model } from "tiktoken";
+import { NextRequest } from "next/server";
+import { NextApiRequest } from "next";
 
 /**
  * Sanitizes input by removing potentially harmful characters.
@@ -168,75 +170,6 @@ export function extractFileTreeFromOutput(output: string): string | null {
   return fileTree;
 }
 
-export function getClientIpAddress(req: Request): string {
-  const forwardedFor = req.headers.get("x-forwarded-for");
-
-  let cleanedIp = "127.0.0.1";
-  if (forwardedFor) {
-    cleanedIp = forwardedFor.split(",")[0].trim();
-  }
-
-  cleanedIp = cleanIpAddress(cleanedIp);
-
-  return cleanedIp;
-}
-
-export function cleanIpAddress(ip: string): string {
-  return ip.replace(/[^a-z0-9]/gi, "").toLowerCase();
-}
-
-export async function getOrCreateUserTokens(
-  userId: string | null,
-  modelId: string,
-  clientIp: string
-) {
-  if (userId) {
-    // User is authenticated
-    return prisma.userTokens.upsert({
-      where: { userId_modelId: { userId, modelId } },
-      update: {},
-      create: { userId, modelId, tokensLeft: 1000 },
-    });
-  } else {
-    // User is not authenticated (anonymous session)
-    const cleanedIp = cleanIpAddress(clientIp);
-    const anonymousUserId = `anon_${cleanedIp}`;
-
-    let anonymousSession = await prisma.anonymousSession.findFirst({
-      where: { sessionId: anonymousUserId },
-      include: { userTokens: true },
-    });
-
-    if (!anonymousSession) {
-      anonymousSession = await prisma.anonymousSession.create({
-        data: {
-          sessionId: anonymousUserId,
-          ipAddress: clientIp,
-          userTokens: {
-            create: { modelId, tokensLeft: 1000 },
-          },
-        },
-        include: { userTokens: true },
-      });
-    }
-
-    const userTokens = anonymousSession.userTokens.find(
-      (ut) => ut.modelId === modelId
-    );
-    if (userTokens) {
-      return userTokens;
-    } else {
-      return prisma.userTokens.create({
-        data: {
-          modelId,
-          tokensLeft: 1000,
-          anonymousSessionId: anonymousSession.id,
-        },
-      });
-    }
-  }
-}
-
 export function getInputTokens(
   messages: ChatMessage | ChatMessage[] | string
 ): number {
@@ -256,4 +189,95 @@ export function getInputTokens(
   } else {
     return processMessage(messages);
   }
+}
+
+export function getClientIpAddress(req: NextRequest | Request): string {
+  let ip: string | null;
+
+  if (req instanceof NextRequest) {
+    ip = req.ip ?? req.headers.get("x-forwarded-for")?.split(",")[0] ?? null;
+  } else {
+    const forwardedFor = req.headers.get("x-forwarded-for");
+    ip = forwardedFor ? forwardedFor.split(",")[0] : null;
+  }
+
+  if (!ip) {
+    console.warn("Unable to determine client IP address");
+    return "unknown";
+  }
+
+  return ip;
+}
+
+export function cleanIpAddress(ip: string): string {
+  return ip.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+}
+
+export async function getOrCreateUserTokens(
+  userId: string | null,
+  modelId: string
+) {
+  if (userId) {
+    return prisma.userTokens.upsert({
+      where: { userId_modelId: { userId, modelId } },
+      update: {},
+      create: { userId, modelId, tokensLeft: 1000 },
+    });
+  } else {
+    throw new Error("Cannot create user tokens without a userId");
+  }
+}
+
+export async function getOrCreateAnonymousUserTokens(
+  anonymousId: string,
+  modelId: string
+) {
+  let anonymousSession = await prisma.anonymousSession.findUnique({
+    where: { sessionId: anonymousId },
+    include: { userTokens: true },
+  });
+
+  if (!anonymousSession) {
+    throw new Error("Anonymous session not found");
+  }
+
+  const userTokens = anonymousSession.userTokens.find(
+    (ut) => ut.modelId === modelId
+  );
+
+  if (userTokens) {
+    return userTokens;
+  } else {
+    return prisma.userTokens.create({
+      data: {
+        modelId,
+        tokensLeft: 1000,
+        anonymousSessionId: anonymousSession.id,
+      },
+    });
+  }
+}
+
+export async function getOrCreateAnonymousUser(
+  req: NextRequest | Request
+): Promise<string> {
+  const clientIp = getClientIpAddress(req);
+
+  if (!clientIp) {
+    throw new Error("Unable to determine client IP address");
+  }
+
+  const cleanIp = cleanIpAddress(clientIp);
+  const anonymousId = `anon_${cleanIp}`;
+
+  const anonymousSession = await prisma.anonymousSession.upsert({
+    where: { sessionId: anonymousId },
+    update: { updatedAt: new Date() },
+    create: {
+      sessionId: anonymousId,
+      ipAddress: clientIp,
+    },
+  });
+
+  return anonymousSession.sessionId;
 }

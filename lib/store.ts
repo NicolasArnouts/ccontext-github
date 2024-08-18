@@ -1,5 +1,13 @@
+// lib/store.ts
 import { create } from "zustand";
 import { Model } from "@prisma/client";
+
+interface UserState {
+  userId: string | null;
+  anonymousId: string | null;
+  setUserId: (id: string | null) => void;
+  setAnonymousId: (id: string | null) => void;
+}
 
 interface GithubCContextState {
   // GitHub CContext related state
@@ -46,6 +54,13 @@ interface Message {
   role: "system" | "user" | "assistant";
   content: string;
 }
+
+export const useUserStore = create<UserState>((set) => ({
+  userId: null,
+  anonymousId: null,
+  setUserId: (id) => set({ userId: id }),
+  setAnonymousId: (id) => set({ anonymousId: id }),
+}));
 
 export const useGithubCContextStore = create<GithubCContextState>((set) => ({
   // Initial state

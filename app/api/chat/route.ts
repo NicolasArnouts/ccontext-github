@@ -1,19 +1,19 @@
-import OpenAI from "openai";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prismadb";
-import { encoding_for_model } from "tiktoken";
 import {
-  getClientIpAddress,
   getInputTokens,
+  getOrCreateAnonymousUser,
   getOrCreateUserTokens,
+  getOrCreateAnonymousUserTokens,
 } from "@/lib/helpers";
+import OpenAI from "openai";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const { userId } = auth();
   const { messages, modelId } = await req.json();
 
@@ -26,8 +26,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const clientIp = getClientIpAddress(req);
-    let userTokens = await getOrCreateUserTokens(userId, modelId, clientIp);
+    let userTokens;
+    let clientId: string;
+
+    if (userId) {
+      clientId = userId;
+      userTokens = await getOrCreateUserTokens(userId, modelId);
+    } else {
+      clientId = await getOrCreateAnonymousUser(req);
+      userTokens = await getOrCreateAnonymousUserTokens(clientId, modelId);
+    }
 
     if (model.tags.includes("Premium") && !userId) {
       return NextResponse.json(
@@ -36,12 +44,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const encoder = encoding_for_model("gpt-4o-mini");
     const inputTokens = messages.reduce((acc, message) => {
-      return acc + encoder.encode(message.content).length;
+      return acc + getInputTokens(message.content);
     }, 0);
-
-    console.log("inputTokens", inputTokens);
 
     if (userTokens.tokensLeft < inputTokens) {
       return NextResponse.json(
@@ -72,7 +77,7 @@ export async function POST(req: Request) {
       async start(controller) {
         for await (const chunk of stream) {
           const content = chunk.choices[0]?.delta?.content || "";
-          responseTokens += encoder.encode(content).length;
+          responseTokens += getInputTokens(content);
           responseContent += content;
           controller.enqueue(new TextEncoder().encode(content));
         }
@@ -89,9 +94,6 @@ export async function POST(req: Request) {
     // Use a TransformStream to update tokens after the stream is complete
     const tokenUpdateStream = new TransformStream({
       async flush(controller) {
-        // console.log("after the stream is complete");
-        console.log("responseTokens", responseTokens);
-
         // Update tokens for the response after streaming is complete
         const updatedUserTokens = await prisma.userTokens.update({
           where: { id: userTokens.id },
@@ -102,17 +104,15 @@ export async function POST(req: Request) {
         });
 
         // Save the chat message
-        if (userId || clientIp) {
-          await prisma.chatMessage.create({
-            data: {
-              userId: userId || null,
-              sessionId: userId || clientIp,
-              role: "assistant",
-              content: responseContent,
-              order: messages.length,
-            },
-          });
-        }
+        await prisma.chatMessage.create({
+          data: {
+            userId: userId || null,
+            sessionId: clientId,
+            role: "assistant",
+            content: responseContent,
+            order: messages.length,
+          },
+        });
       },
     });
 
