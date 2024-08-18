@@ -22,7 +22,7 @@ export default function Home() {
 
   return (
     <main className="flex flex-col items-center justify-between">
-      <div className="space-y-6 w-full ">
+      <div className="md:space-y-6 w-full ">
         <div className="">
           <ResizablePanelGroup
             direction="horizontal"

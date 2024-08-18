@@ -1,18 +1,18 @@
 // app/layout.tsx
 import type { Metadata } from "next";
-import { Inter as FontSans } from "next/font/google"
-import { cn } from "@/lib/utils"
-import { ClerkProvider } from '@clerk/nextjs'
-import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
-import Header from "@/components/Header"
+import { Inter as FontSans } from "next/font/google";
+import { cn } from "@/lib/utils";
+import { ClerkProvider } from "@clerk/nextjs";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toaster";
+import Header from "@/components/Header";
 
 import "./globals.css";
 
 const fontSans = FontSans({
   subsets: ["latin"],
   variable: "--font-sans",
-})
+});
 
 export const metadata: Metadata = {
   title: "GitHub CContext",
@@ -27,10 +27,12 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <body className={cn(
-          "min-h-screen bg-background font-sans antialiased",
-          fontSans.variable
-        )}>
+        <body
+          className={cn(
+            "min-h-screen bg-background font-sans antialiased",
+            fontSans.variable
+          )}
+        >
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -38,9 +40,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <Header />
-            <main className="container mx-auto py-6">
-              {children}
-            </main>
+            <main className="md:container md:mx-auto md:py-6">{children}</main>
             <Toaster />
           </ThemeProvider>
         </body>
