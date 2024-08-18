@@ -59,7 +59,7 @@ export const useGithubCContextStore = create<GithubCContextState>((set) => ({
   selectedModel: "",
   models: [],
   messages: [],
-  tokensLeft: {},
+  tokensLeft: {}, // Initialize as an empty object
   tokenCost: 0,
 
   // GitHub CContext actions
@@ -89,7 +89,7 @@ export const useGithubCContextStore = create<GithubCContextState>((set) => ({
   clearMessages: () => set({ messages: [] }),
 
   // Token related actions
-  setTokensLeft: (modelId, amount) =>
+  setTokensLeft: (modelId: string, amount: number) =>
     set((state) => ({
       tokensLeft: {
         ...state.tokensLeft,

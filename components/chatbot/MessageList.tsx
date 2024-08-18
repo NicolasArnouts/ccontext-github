@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect } from "react";
 import UserMessage from "@/components/chatbot/UserMessage";
 import SystemMessage from "@/components/chatbot/SystemMessage";

@@ -1,4 +1,4 @@
-"use client";
+// components/chatbot/ChatInput.tsx
 
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { ArrowUp } from "lucide-react";
@@ -17,8 +17,8 @@ interface ChatInputProps {
   onSubmit: (message: string, modelId: string) => void;
   isStreaming?: boolean;
   previousMessages: string[];
-  tokensLeft: number | null;
-  onTokensUpdated: (tokens: number) => void;
+  tokensLeft: Record<string, number>;
+  onTokensUpdated: (modelId: string, tokens: number) => void;
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({
@@ -47,22 +47,16 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   useEffect(() => {
     if (selectedModel) {
-      fetchTokensLeft();
+      fetchTokensLeft(selectedModel);
     }
   }, [selectedModel]);
 
-  useEffect(() => {
-    fetchTokensLeft();
-  }, [isStreaming]);
-
-  const fetchTokensLeft = async () => {
+  const fetchTokensLeft = async (modelId: string) => {
     try {
-      const response = await fetch(
-        `/api/token-tracking?modelId=${selectedModel}`
-      );
+      const response = await fetch(`/api/token-tracking?modelId=${modelId}`);
       if (response.ok) {
         const data = await response.json();
-        onTokensUpdated(data.remainingTokens);
+        onTokensUpdated(modelId, data.remainingTokens);
       }
     } catch (error) {
       console.error("Error fetching tokens left:", error);
@@ -144,7 +138,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         throw new Error("Failed to check tokens");
       }
       const data = await response.json();
-      onTokensUpdated(data.remainingTokens);
+      onTokensUpdated(modelId, data.remainingTokens);
       return data.success;
     } catch (error) {
       console.error("Error checking tokens:", error);
@@ -204,6 +198,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
     setShowPremiumModelDialog(false);
   };
 
+  const currentTokensLeft = selectedModel
+    ? tokensLeft[selectedModel]
+    : undefined;
+
   return (
     <>
       <form onSubmit={handleSubmit} className="shadow-md">
@@ -238,9 +236,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
               />
             )}
             <div className="text-sm text-gray-600 dark:text-gray-300">
-              <div className="bg-red-200">Chat cost: {tokenCost}</div>
+              <div className="bg-red-200">
+                Chat cost: {typeof tokenCost === "number" ? tokenCost : "N/A"}
+              </div>
               <div className="bg-blue-200">
-                Tokens left: {tokensLeft !== null ? tokensLeft : "N/A"}
+                Tokens left:{" "}
+                {typeof currentTokensLeft === "number"
+                  ? currentTokensLeft
+                  : "N/A"}
               </div>
             </div>
           </div>

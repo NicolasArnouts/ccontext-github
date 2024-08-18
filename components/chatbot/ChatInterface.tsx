@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/components/ui/use-toast";
@@ -68,11 +70,12 @@ const ChatInterface: React.FC = () => {
       );
       if (!response.ok) throw new Error("Failed to fetch updated token count");
       const data = await response.json();
-      setTokensLeft(data.remainingTokens);
+      setTokensLeft(selectedModel, data.remainingTokens);
     } catch (error) {
       console.error("Error updating tokens left:", error);
+      // Don't update tokensLeft on error to keep the previous value
     }
-  }, [selectedModel]);
+  }, [selectedModel, setTokensLeft]);
 
   const handleSendMessage = async (userInput: string, modelId: string) => {
     if (!userInput.trim()) return;
