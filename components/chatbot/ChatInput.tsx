@@ -36,7 +36,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [showOutOfTokensDialog, setShowOutOfTokensDialog] = useState(false);
   const [showPremiumModelDialog, setShowPremiumModelDialog] = useState(false);
   const { toast } = useToast();
-  const { isSignedIn } = useUser();
+  const { isSignedIn, isLoaded } = useUser();
 
   const { tokenCost, selectedModel, setSelectedModel, setTokenCost } =
     useGithubCContextStore();
@@ -183,7 +183,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   const handleModelSelect = (modelId: string) => {
     const selectedModelData = models.find((model) => model.id === modelId);
-    if (selectedModelData && selectedModelData.tags.includes("Premium")) {
+    if (
+      selectedModelData &&
+      selectedModelData.tags.includes("Premium") &&
+      !isSignedIn
+    ) {
       setShowPremiumModelDialog(true);
     } else {
       setSelectedModel(modelId);
