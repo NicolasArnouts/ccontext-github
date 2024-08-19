@@ -146,7 +146,24 @@ const TokenStore = () => {
                   htmlFor="token-amount"
                   className="block text-sm font-medium mb-1"
                 >
-                  Token Amount
+                  Tokens left for this model
+                </label>
+                <Input
+                  id="token-amount"
+                  type="number"
+                  value={tokenAmount}
+                  onChange={(e) => setTokenAmount(Number(e.target.value))}
+                  disabled={true}
+                  min={1000}
+                  step={1000}
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="token-amount"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Tokens to purchase
                 </label>
                 <Input
                   id="token-amount"

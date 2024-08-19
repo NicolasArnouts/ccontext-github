@@ -147,6 +147,12 @@ export function extractFileTreeContent(markdownContent: string): string | null {
   return null;
 }
 
+export function extractFileTreeFromOutput(output: string): string | null {
+  const fileTreeRegex = /📁[\s\S]*?Total context size:/;
+  const match = output.match(fileTreeRegex);
+  return match ? match[0].trim() : null;
+}
+
 /**
  * Strips ANSI color codes from a string.
  * @param str The string to strip ANSI codes from

@@ -2,11 +2,9 @@
 import { create } from "zustand";
 import { Model } from "@prisma/client";
 
-interface UserState {
-  userId: string | null;
-  anonymousId: string | null;
-  setUserId: (id: string | null) => void;
-  setAnonymousId: (id: string | null) => void;
+interface Message {
+  role: "system" | "user" | "assistant";
+  content: string;
 }
 
 interface GithubCContextState {
@@ -18,7 +16,8 @@ interface GithubCContextState {
   pdfExists: boolean;
   isLoading: boolean;
   envId: string | null;
-  fileTree: string | null; // Add this line
+  fileTree: string | null;
+  calculatedTokens: number | null;
 
   // Chat interface related state
   selectedModel: string;
@@ -37,7 +36,8 @@ interface GithubCContextState {
   setPdfExists: (exists: boolean) => void;
   setIsLoading: (isLoading: boolean) => void;
   setEnvId: (id: string | null) => void;
-  setFileTree: (fileTree: string | null) => void; // Add this line
+  setFileTree: (fileTree: string | null) => void;
+  setCalculatedTokens: (tokens: number | null) => void;
 
   // Chat interface actions
   setSelectedModel: (modelId: string) => void;
@@ -52,18 +52,6 @@ interface GithubCContextState {
   deductTokens: (modelId: string, amount: number) => void;
 }
 
-interface Message {
-  role: "system" | "user" | "assistant";
-  content: string;
-}
-
-export const useUserStore = create<UserState>((set) => ({
-  userId: null,
-  anonymousId: null,
-  setUserId: (id) => set({ userId: id }),
-  setAnonymousId: (id) => set({ anonymousId: id }),
-}));
-
 export const useGithubCContextStore = create<GithubCContextState>((set) => ({
   // Initial state
   githubUrl: "",
@@ -73,11 +61,12 @@ export const useGithubCContextStore = create<GithubCContextState>((set) => ({
   pdfExists: false,
   isLoading: false,
   envId: null,
-  fileTree: null, // Initialize fileTree
+  fileTree: null,
+  calculatedTokens: null,
   selectedModel: "",
   models: [],
   messages: [],
-  tokensLeft: {}, // Initialize as an empty object
+  tokensLeft: {},
   tokenCost: 0,
 
   // GitHub CContext actions
@@ -88,7 +77,8 @@ export const useGithubCContextStore = create<GithubCContextState>((set) => ({
   setPdfExists: (exists) => set({ pdfExists: exists }),
   setIsLoading: (isLoading) => set({ isLoading }),
   setEnvId: (id) => set({ envId: id }),
-  setFileTree: (fileTree) => set({ fileTree }), // Add setter for fileTree
+  setFileTree: (fileTree) => set({ fileTree }),
+  setCalculatedTokens: (tokens) => set({ calculatedTokens: tokens }),
 
   // Chat interface actions
   setSelectedModel: (modelId) => set({ selectedModel: modelId }),
@@ -123,4 +113,19 @@ export const useGithubCContextStore = create<GithubCContextState>((set) => ({
         [modelId]: (state.tokensLeft[modelId] || 0) - amount,
       },
     })),
+}));
+
+// User-related state
+interface UserState {
+  userId: string | null;
+  anonymousId: string | null;
+  setUserId: (id: string | null) => void;
+  setAnonymousId: (id: string | null) => void;
+}
+
+export const useUserStore = create<UserState>((set) => ({
+  userId: null,
+  anonymousId: null,
+  setUserId: (id) => set({ userId: id }),
+  setAnonymousId: (id) => set({ anonymousId: id }),
 }));

@@ -8,8 +8,6 @@ import {
   validateGitHubUrl,
   sanitizeInput,
   generateRepoSlug,
-  getFileRepoPath,
-  extractFileTreeContent,
   extractFileTreeFromOutput,
 } from "@/lib/helpers";
 
@@ -187,7 +185,7 @@ export class TempEnvManager {
     const result = await execAsync(fullCommand);
 
     // Extract file tree from the command output
-    const fileTree = extractFileTreeFromOutput(result.stdout) || "";
+    const fileTree = extractFileTreeFromOutput(result.stdout);
 
     // Get markdown content if it exists
     const markdownContent = await this.getMarkdownIfExists(repoPath);

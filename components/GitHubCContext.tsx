@@ -9,6 +9,7 @@ import axios from "axios";
 import ParsedFileTree from "@/components/ParsedFileTree";
 import CalculatedTokens from "@/components/CalculatedTokens";
 import { useGithubCContextStore } from "@/lib/store";
+import { parseCommandOutput } from "@/lib/helpers-client";
 
 interface GitHubCContextProps {
   onMarkdownGenerated: (content: string) => void;
@@ -35,6 +36,7 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
     setIsLoading,
     setEnvId,
     setFileTree,
+    setCalculatedTokens,
   } = useGithubCContextStore();
 
   const { toast } = useToast();
@@ -167,6 +169,9 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
       </Button>
       <div className="w-full">
         <div>
+          {calculatedTokens !== null && (
+            <CalculatedTokens tokens={calculatedTokens} />
+          )}
           <h3 className="text-lg font-semibold mb-2 text-foreground">
             Command Output:
           </h3>
@@ -188,10 +193,6 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
       </div>
 
       {fileTree && <ParsedFileTree fileTree={fileTree} />}
-
-      {calculatedTokens !== null && (
-        <CalculatedTokens tokens={calculatedTokens} />
-      )}
 
       {(markdownContent || pdfExists) && (
         <div>

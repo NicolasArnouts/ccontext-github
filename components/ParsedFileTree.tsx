@@ -27,11 +27,11 @@ const ParsedFileTree: React.FC<ParsedFileTreeProps> = ({ fileTree }) => {
   };
 
   return (
-    <div className="bg-background border border-border p-4 rounded-lg">
-      <h3 className="text-lg font-semibold mb-2 text-foreground">
-        Parsed File Tree:
-      </h3>
-      <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto max-h-96">
+    <div className="flex flex-col bg-background border border-border rounded-lg">
+      {/* <h3 className="  w-full items-center text-center text-xl font-semibold text-foreground">
+        File Tree:
+      </h3> */}
+      <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto max-h-96 p-2">
         {renderFileTree(fileTree)}
       </pre>
     </div>
