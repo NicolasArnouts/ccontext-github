@@ -42,3 +42,21 @@ export async function getClientIpAddress(): Promise<string> {
 export function cleanIpAddress(ip: string): string {
   return ip.replace(/[^a-z0-9]/gi, "").toLowerCase();
 }
+
+export function extractFileTreeFromOutput(output: string): string | null {
+  const fileTreeRegex = /📁[\s\S]*?Total context size:/;
+  const match = output.match(fileTreeRegex);
+  return match ? match[0].trim() : null;
+}
+
+export function parseCommandOutput(output: string) {
+  const fileTree = extractFileTreeFromOutput(output);
+  const calculatedTokens = extractCalculatedTokens(output);
+  return { fileTree, calculatedTokens };
+}
+
+export function extractCalculatedTokens(output: string): number | null {
+  const tokenRegex = /Total context size:\s*(\d+)/;
+  const match = output.match(tokenRegex);
+  return match ? parseInt(match[1], 10) : null;
+}

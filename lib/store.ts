@@ -18,6 +18,7 @@ interface GithubCContextState {
   pdfExists: boolean;
   isLoading: boolean;
   envId: string | null;
+  fileTree: string | null; // Add this line
 
   // Chat interface related state
   selectedModel: string;
@@ -36,6 +37,7 @@ interface GithubCContextState {
   setPdfExists: (exists: boolean) => void;
   setIsLoading: (isLoading: boolean) => void;
   setEnvId: (id: string | null) => void;
+  setFileTree: (fileTree: string | null) => void; // Add this line
 
   // Chat interface actions
   setSelectedModel: (modelId: string) => void;
@@ -71,6 +73,7 @@ export const useGithubCContextStore = create<GithubCContextState>((set) => ({
   pdfExists: false,
   isLoading: false,
   envId: null,
+  fileTree: null, // Initialize fileTree
   selectedModel: "",
   models: [],
   messages: [],
@@ -85,6 +88,7 @@ export const useGithubCContextStore = create<GithubCContextState>((set) => ({
   setPdfExists: (exists) => set({ pdfExists: exists }),
   setIsLoading: (isLoading) => set({ isLoading }),
   setEnvId: (id) => set({ envId: id }),
+  setFileTree: (fileTree) => set({ fileTree }), // Add setter for fileTree
 
   // Chat interface actions
   setSelectedModel: (modelId) => set({ selectedModel: modelId }),

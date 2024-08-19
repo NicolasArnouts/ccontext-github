@@ -227,7 +227,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             </button>
           </div>
 
-          <div className="flex justify-between items-center mt-2">
+          <div className="flex flex-col sm:flex-row gap-2  justify-between items-center mt-2">
             {isLoadingModels ? (
               <div className="text-sm text-gray-600 dark:text-gray-300">
                 Loading models...
@@ -240,10 +240,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
               />
             )}
             <div className="text-sm text-gray-600 dark:text-gray-300">
-              <div className="bg-red-200">
+              <div className="">
                 Chat cost: {typeof tokenCost === "number" ? tokenCost : "N/A"}
               </div>
-              <div className="bg-blue-200">
+              <div className="">
                 Tokens left:{" "}
                 {typeof currentTokensLeft === "number"
                   ? currentTokensLeft

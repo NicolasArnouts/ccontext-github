@@ -55,14 +55,14 @@ const Header = () => {
             {isLoaded ? (
               isSignedIn ? (
                 <>
-                  <span className="text-sm">User ID: {user.id}</span>
+                  {/* <span className="text-sm">User ID: {user.id}</span> */}
                   <UserButton afterSignOutUrl="/" />
                 </>
               ) : (
                 <>
-                  <span className="text-sm">
+                  {/* <span className="text-sm">
                     Anonymous ID: {anonymousId || "Loading..."}
-                  </span>
+                  </span> */}
                   <SignInButton mode="modal">
                     <button className="text-sm font-medium">Sign In</button>
                   </SignInButton>

@@ -156,20 +156,6 @@ export function stripAnsiCodes(str: string): string {
   return str.replace(/\x1B[[(?);]{0,2}(;?\d)*./g, "");
 }
 
-export function extractFileTreeFromOutput(output: string): string | null {
-  const startMarker = " 📁";
-  const endMarker = "Total context size:";
-
-  const startIndex = output.indexOf(startMarker);
-  if (startIndex === -1) return null;
-
-  const endIndex = output.indexOf(endMarker, startIndex);
-  if (endIndex === -1) return null;
-
-  const fileTree = output.substring(startIndex, endIndex).trim();
-  return fileTree;
-}
-
 export function getInputTokens(
   messages: ChatMessage | ChatMessage[] | string
 ): number {

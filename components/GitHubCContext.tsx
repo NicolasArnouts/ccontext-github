@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
-import FileTree from "@/components/FileTree";
+import ParsedFileTree from "@/components/ParsedFileTree";
+import CalculatedTokens from "@/components/CalculatedTokens";
 import { useGithubCContextStore } from "@/lib/store";
 
 interface GitHubCContextProps {
@@ -24,6 +25,8 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
     pdfExists,
     isLoading,
     envId,
+    fileTree,
+    calculatedTokens,
     setGithubUrl,
     setCcontextCommand,
     setOutput,
@@ -31,6 +34,7 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
     setPdfExists,
     setIsLoading,
     setEnvId,
+    setFileTree,
   } = useGithubCContextStore();
 
   const { toast } = useToast();
@@ -52,15 +56,22 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
       setOutput("Processing...");
       setMarkdownContent(null);
       setPdfExists(false);
+      setFileTree(null);
+      setCalculatedTokens(null);
       const response = await axios.post("/api/clone-and-run", {
         githubUrl,
         ccontextCommand,
         envId,
       });
+      const { fileTree, calculatedTokens } = parseCommandOutput(
+        response.data.output
+      );
       setOutput(response.data.output || response.data.error);
       setMarkdownContent(response.data.markdownContent || null);
       setPdfExists(response.data.pdfExists || false);
       setEnvId(response.data.repositoryId);
+      setFileTree(fileTree);
+      setCalculatedTokens(calculatedTokens);
     } catch (error) {
       console.error("Error:", error);
       let errorMessage = "An error occurred while processing your request.";
@@ -176,6 +187,12 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
         </div>
       </div>
 
+      {fileTree && <ParsedFileTree fileTree={fileTree} />}
+
+      {calculatedTokens !== null && (
+        <CalculatedTokens tokens={calculatedTokens} />
+      )}
+
       {(markdownContent || pdfExists) && (
         <div>
           <h3 className="text-lg font-semibold mb-2 text-foreground">
@@ -197,7 +214,6 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
                 Chat with AI
               </Button>
             </div>
-            {markdownContent && <FileTree markdownContent={markdownContent} />}
           </div>
         </div>
       )}
