@@ -1,3 +1,5 @@
+"use client";
+
 // components/chatbot/ChatInput.tsx
 
 import React, { useState, useCallback, useEffect, useMemo } from "react";
@@ -12,6 +14,7 @@ import SignInModal from "@/components/SignInModal";
 import OutOfTokensDialog from "@/components/OutOfTokensDialog";
 import PremiumModelDialog from "@/components/PremiumModelDialog";
 import { useUser } from "@clerk/nextjs";
+import Link from "next/link";
 
 interface ChatInputProps {
   onSubmit: (message: string, modelId: string) => void;
@@ -210,7 +213,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     <>
       <form onSubmit={handleSubmit} className="shadow-md">
         <div className="relative flex flex-col pl-2 py-2 bg-white dark:bg-gray-800">
-          <div className="relative flex flex-1 w-full">
+          <div className="relative flex flex-1 w-full gap-2">
             <TextareaAutosize
               value={inputValue}
               onChange={handleInputChange}
@@ -239,15 +242,22 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 onModelSelect={handleModelSelect}
               />
             )}
-            <div className="text-sm text-gray-600 dark:text-gray-300">
-              <div className="">
-                Chat cost: {typeof tokenCost === "number" ? tokenCost : "N/A"}
-              </div>
-              <div className="">
-                Tokens left:{" "}
-                {typeof currentTokensLeft === "number"
-                  ? currentTokensLeft
-                  : "N/A"}
+
+            <div className="flex flex-col items-center gap-2 pr-2">
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                <div className="">
+                  Chat cost: {typeof tokenCost === "number" ? tokenCost : "N/A"}
+                </div>
+                <div className="">
+                  Tokens left:{" "}
+                  {typeof currentTokensLeft === "number"
+                    ? currentTokensLeft
+                    : "N/A"}
+                </div>
+
+                <Link href="/token-store" className="text-purple-500 font-bold">
+                  Buy more tokens
+                </Link>
               </div>
             </div>
           </div>

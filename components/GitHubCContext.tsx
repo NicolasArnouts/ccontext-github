@@ -10,6 +10,7 @@ import ParsedFileTree from "@/components/ParsedFileTree";
 import CalculatedTokens from "@/components/CalculatedTokens";
 import { useGithubCContextStore } from "@/lib/store";
 import { parseCommandOutput } from "@/lib/helpers-client";
+import CommandOutput from "@/components/CommandOutput";
 
 interface GitHubCContextProps {
   onMarkdownGenerated: (content: string) => void;
@@ -167,30 +168,12 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
           ? "Run CContext"
           : "Clone and Run CContext"}
       </Button>
-      <div className="w-full">
-        <div>
-          {calculatedTokens !== null && (
-            <CalculatedTokens tokens={calculatedTokens} />
-          )}
-          <h3 className="text-lg font-semibold mb-2 text-foreground">
-            Command Output:
-          </h3>
-          <Textarea
-            placeholder="Output will appear here..."
-            value={output}
-            readOnly
-            className="h-64 font-mono text-sm mb-2 w-full bg-background text-foreground border-border"
-          />
-          {output && (
-            <Button
-              onClick={() => handleCopyToClipboard(output)}
-              className="flex w-full mb-4"
-            >
-              Copy Output to Clipboard
-            </Button>
-          )}
-        </div>
-      </div>
+
+      {/* <CommandOutput
+        calculatedTokens={calculatedTokens}
+        output={output}
+        handleCopyToClipboard={handleCopyToClipboard}
+      /> */}
 
       {fileTree && <ParsedFileTree fileTree={fileTree} />}
 

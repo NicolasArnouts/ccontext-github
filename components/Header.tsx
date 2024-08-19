@@ -47,9 +47,6 @@ const Header = () => {
         </Link>
 
         <div className="flex items-center gap-4">
-          <Link href="/token-store" className="text-sm font-medium">
-            Token Store
-          </Link>
           <ModeToggle />
           <div className="flex items-center gap-2">
             {isLoaded ? (
