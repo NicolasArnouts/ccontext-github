@@ -67,10 +67,12 @@ model ChatMessage {
 }
 
 model Model {
-  id         String       @id @default(uuid())
-  name       String       @unique
-  tags       String[]
-  userTokens UserTokens[]
+  id                    String       @id @default(uuid())
+  name                  String       @unique
+  tags                  String[]
+  pricePerMillionTokens Float
+  userTokens            UserTokens[]
+  purchases             Purchase[]
 }
 
 model UserTokens {
@@ -101,4 +103,18 @@ model AnonymousSession {
   userTokens UserTokens[]
 
   @@index([ipAddress])
+}
+
+model Purchase {
+  id        String   @id @default(uuid())
+  userId    String
+  modelId   String
+  amount    Int
+  cost      Float
+  createdAt DateTime @default(now())
+
+  model Model @relation(fields: [modelId], references: [id])
+
+  @@index([userId])
+  @@index([modelId])
 }

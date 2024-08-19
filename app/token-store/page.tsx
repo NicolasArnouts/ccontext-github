@@ -1,3 +1,4 @@
+// app/token-store/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -22,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Model } from "@prisma/client";
 import { useGithubCContextStore } from "@/lib/store";
+import getStripe from "@/lib/get-stripejs";
 
 const TokenStore = () => {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -46,11 +48,13 @@ const TokenStore = () => {
     try {
       const response = await fetch("/api/models");
       if (response.ok) {
-        const data = await response.json();
-        setModels(data);
-        if (data.length > 0) {
-          setSelectedModel(data[0].id);
+        const fetchedModels = await response.json();
+        setModels(fetchedModels);
+        if (fetchedModels.length > 0) {
+          setSelectedModel(fetchedModels[0].id);
         }
+      } else {
+        throw new Error("Failed to fetch models");
       }
     } catch (error) {
       console.error("Error fetching models:", error);
@@ -63,19 +67,19 @@ const TokenStore = () => {
   };
 
   const fetchTokensLeft = async (modelId: string) => {
-    if (!isSignedIn) return;
-
     try {
       const response = await fetch(`/api/token-tracking?modelId=${modelId}`);
       if (response.ok) {
         const data = await response.json();
         setTokensLeft(modelId, data.remainingTokens);
+      } else {
+        throw new Error("Failed to fetch tokens left");
       }
     } catch (error) {
       console.error("Error fetching tokens left:", error);
       toast({
         title: "Error",
-        description: "Failed to fetch token balance. Please try again.",
+        description: "Failed to fetch remaining tokens. Please try again.",
         variant: "destructive",
       });
     }
@@ -93,12 +97,7 @@ const TokenStore = () => {
 
     setIsLoading(true);
     try {
-      // Here you would integrate with your payment processing system
-      // For now, we'll simulate a successful purchase
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // After successful payment, update the user's tokens
-      const response = await fetch("/api/add-tokens", {
+      const response = await fetch("/api/create-checkout-session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -107,15 +106,20 @@ const TokenStore = () => {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setTokensLeft(selectedModel, data.tokensLeft);
-        toast({
-          title: "Purchase Successful",
-          description: `Added ${tokenAmount} tokens for the selected model.`,
-        });
-        await fetchTokensLeft(selectedModel);
+        const { sessionId } = await response.json();
+        const stripe = await getStripe();
+        const { error } = await stripe!.redirectToCheckout({ sessionId });
+
+        if (error) {
+          console.error("Stripe checkout error:", error);
+          toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
       } else {
-        throw new Error("Failed to add tokens");
+        throw new Error("Failed to create checkout session");
       }
     } catch (error) {
       console.error("Error processing purchase:", error);
@@ -128,6 +132,10 @@ const TokenStore = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const calculateCost = (model: Model, amount: number) => {
+    return (model.pricePerMillionTokens * amount) / 1000000;
   };
 
   if (!isLoaded) {
@@ -167,7 +175,8 @@ const TokenStore = () => {
                   <SelectContent>
                     {models.map((model) => (
                       <SelectItem key={model.id} value={model.id}>
-                        {model.name} {model.tags.includes("Premium") && "🌟"}
+                        {model.name} {model.tags.includes("Premium") && "🌟"} -
+                        ${model.pricePerMillionTokens}/million tokens
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -203,6 +212,17 @@ const TokenStore = () => {
                   step={1000}
                 />
               </div>
+              {selectedModel && (
+                <div>
+                  <p className="text-sm font-medium">
+                    Cost: $
+                    {calculateCost(
+                      models.find((m) => m.id === selectedModel)!,
+                      tokenAmount
+                    ).toFixed(2)}
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
           <CardFooter>
