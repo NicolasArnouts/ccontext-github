@@ -201,11 +201,11 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
           </div>
         </div>
       )}
-      {envId && (
+      {/* {envId && (
         <div>
           <p className="text-foreground">Active Environment ID: {envId}</p>
         </div>
-      )}
+      )} */}
     </div>
   );
 };

@@ -36,6 +36,12 @@ const TokenStore = () => {
     fetchModels();
   }, []);
 
+  useEffect(() => {
+    if (isSignedIn && selectedModel) {
+      fetchTokensLeft(selectedModel);
+    }
+  }, [isSignedIn, selectedModel]);
+
   const fetchModels = async () => {
     try {
       const response = await fetch("/api/models");
@@ -51,6 +57,25 @@ const TokenStore = () => {
       toast({
         title: "Error",
         description: "Failed to fetch models. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchTokensLeft = async (modelId: string) => {
+    if (!isSignedIn) return;
+
+    try {
+      const response = await fetch(`/api/token-tracking?modelId=${modelId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTokensLeft(modelId, data.remainingTokens);
+      }
+    } catch (error) {
+      console.error("Error fetching tokens left:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch token balance. Please try again.",
         variant: "destructive",
       });
     }
@@ -88,6 +113,7 @@ const TokenStore = () => {
           title: "Purchase Successful",
           description: `Added ${tokenAmount} tokens for the selected model.`,
         });
+        await fetchTokensLeft(selectedModel);
       } else {
         throw new Error("Failed to add tokens");
       }
@@ -128,7 +154,13 @@ const TokenStore = () => {
                 >
                   Select Model
                 </label>
-                <Select value={selectedModel} onValueChange={setSelectedModel}>
+                <Select
+                  value={selectedModel}
+                  onValueChange={(value) => {
+                    setSelectedModel(value);
+                    fetchTokensLeft(value);
+                  }}
+                >
                   <SelectTrigger id="model-select">
                     <SelectValue placeholder="Select a model" />
                   </SelectTrigger>
@@ -143,19 +175,16 @@ const TokenStore = () => {
               </div>
               <div>
                 <label
-                  htmlFor="token-amount"
+                  htmlFor="tokens-left"
                   className="block text-sm font-medium mb-1"
                 >
                   Tokens left for this model
                 </label>
                 <Input
-                  id="token-amount"
+                  id="tokens-left"
                   type="number"
-                  value={tokenAmount}
-                  onChange={(e) => setTokenAmount(Number(e.target.value))}
+                  value={tokensLeft[selectedModel] || 0}
                   disabled={true}
-                  min={1000}
-                  step={1000}
                 />
               </div>
               <div>
@@ -177,7 +206,10 @@ const TokenStore = () => {
             </div>
           </CardContent>
           <CardFooter>
-            <Button onClick={handlePurchase} disabled={isLoading}>
+            <Button
+              onClick={handlePurchase}
+              disabled={isLoading || !isSignedIn}
+            >
               {isLoading ? "Processing..." : "Purchase Tokens"}
             </Button>
           </CardFooter>

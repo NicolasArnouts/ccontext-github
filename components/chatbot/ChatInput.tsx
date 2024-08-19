@@ -91,7 +91,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const debouncedGetInputTokens = useMemo(
-    () => debounce(getInputTokens, 800),
+    () => debounce(getInputTokens, 300),
     []
   );
 
@@ -255,7 +255,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
                     : "N/A"}
                 </div>
 
-                <Link href="/token-store" className="text-purple-500 font-bold">
+                <Link
+                  href="/token-store"
+                  className="text-purple-500 hover:bg-purple-500 hover:text-white font-bold"
+                >
                   Buy more tokens
                 </Link>
               </div>
