@@ -1,4 +1,3 @@
-// app/token-store/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -22,8 +21,6 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Model } from "@prisma/client";
-import { useGithubCContextStore } from "@/lib/store";
-import getStripe from "@/lib/get-stripejs";
 
 const TokenStore = () => {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -32,7 +29,7 @@ const TokenStore = () => {
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [tokenAmount, setTokenAmount] = useState<number>(1000);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const { tokensLeft, setTokensLeft } = useGithubCContextStore();
+  const [tokensLeft, setTokensLeft] = useState<number | null>(null);
 
   useEffect(() => {
     fetchModels();
@@ -71,7 +68,7 @@ const TokenStore = () => {
       const response = await fetch(`/api/token-tracking?modelId=${modelId}`);
       if (response.ok) {
         const data = await response.json();
-        setTokensLeft(modelId, data.remainingTokens);
+        setTokensLeft(data.remainingTokens);
       } else {
         throw new Error("Failed to fetch tokens left");
       }
@@ -105,28 +102,27 @@ const TokenStore = () => {
         body: JSON.stringify({ modelId: selectedModel, amount: tokenAmount }),
       });
 
-      if (response.ok) {
-        const { sessionId } = await response.json();
-        const stripe = await getStripe();
-        const { error } = await stripe!.redirectToCheckout({ sessionId });
-
-        if (error) {
-          console.error("Stripe checkout error:", error);
-          toast({
-            title: "Error",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
-      } else {
-        throw new Error("Failed to create checkout session");
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
       }
+
+      const { url } = await response.json();
+
+      console.log("url", url);
+
+      // Use replace instead of assign to prevent going back to an intermediary page
+      window.location.replace(url);
+
+      // Prevent further execution
+      return;
     } catch (error) {
       console.error("Error processing purchase:", error);
       toast({
         title: "Purchase Failed",
         description:
-          "There was an error processing your purchase. Please try again.",
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
@@ -184,20 +180,6 @@ const TokenStore = () => {
               </div>
               <div>
                 <label
-                  htmlFor="tokens-left"
-                  className="block text-sm font-medium mb-1"
-                >
-                  Tokens left for this model
-                </label>
-                <Input
-                  id="tokens-left"
-                  type="number"
-                  value={tokensLeft[selectedModel] || 0}
-                  disabled={true}
-                />
-              </div>
-              <div>
-                <label
                   htmlFor="token-amount"
                   className="block text-sm font-medium mb-1"
                 >
@@ -234,28 +216,37 @@ const TokenStore = () => {
             </Button>
           </CardFooter>
         </Card>
+
         <Card>
           <CardHeader>
-            <CardTitle>Token Usage Tips</CardTitle>
-            <CardDescription>Make the most of your tokens</CardDescription>
+            <CardTitle>Token Usage</CardTitle>
+            <CardDescription>
+              Your current token balance and usage tips
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <ul className="list-disc pl-5 space-y-2">
-              <li>
-                Premium models offer advanced capabilities but are more
-                expensive.
-              </li>
-              <li>
-                Optimize your prompts to get better results with fewer tokens.
-              </li>
-              <li>
-                Check your token balance regularly to ensure uninterrupted
-                usage.
-              </li>
-              <li>
-                Tokens are model-specific, so plan your purchases accordingly.
-              </li>
-            </ul>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">Current Balance</h3>
+                <p className="text-2xl font-bold">
+                  {tokensLeft !== null
+                    ? tokensLeft.toLocaleString()
+                    : "Loading..."}{" "}
+                  tokens
+                </p>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Token Usage Tips</h3>
+                <ul className="list-disc list-inside space-y-2">
+                  <li>Tokens are consumed for both input and output text</li>
+                  <li>Longer conversations use more tokens</li>
+                  <li>Premium models may use tokens at a higher rate</li>
+                  <li>
+                    You can check your token usage in real-time during chats
+                  </li>
+                </ul>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

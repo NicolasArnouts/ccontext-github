@@ -1,11 +1,8 @@
 // app/api/create-checkout-session/route.ts
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import Stripe from "stripe";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-06-20",
-});
+import stripe from "@/lib/stripe";
+import prisma from "@/lib/prismadb";
 
 export async function POST(req: Request) {
   try {
@@ -16,15 +13,18 @@ export async function POST(req: Request) {
 
     const { modelId, amount } = await req.json();
 
-    // Fetch model details from your database
-    // const model = await prisma.model.findUnique({ where: { id: modelId } });
-    // if (!model) {
-    //   return NextResponse.json({ error: "Invalid model" }, { status: 400 });
-    // }
+    // Fetch model details from db
+    const model = await prisma.model.findUnique({ where: { id: modelId } });
+    if (!model) {
+      return NextResponse.json({ error: "Invalid model" }, { status: 400 });
+    }
 
-    // For now, we'll use a placeholder price
-    const pricePerMillionTokens = 10; // Replace with actual price from your model
+    const pricePerMillionTokens = model.pricePerMillionTokens;
     const cost = (pricePerMillionTokens * amount) / 1000000;
+
+    // Ensure the minimum charge is at least $0.50
+    const minCharge = 0.5;
+    const finalCost = Math.max(cost, minCharge);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
             product_data: {
               name: `${amount} Tokens`,
             },
-            unit_amount: Math.round(cost * 100),
+            unit_amount: Math.round(finalCost * 100), // Stripe expects amount in cents
           },
           quantity: 1,
         },
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ sessionId: session.id });
+    return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error) {
     console.error("Error creating checkout session:", error);
     return NextResponse.json(
