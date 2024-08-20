@@ -23,7 +23,7 @@ const SignInModal: React.FC<SignInModalProps> = ({ isOpen, onClose }) => {
         <DialogHeader>
           <DialogTitle>Sign In Required</DialogTitle>
           <DialogDescription>
-            You've reached the limit for anonymous chats. Please sign in to
+            You&apos;ve reached the limit for anonymous chats. Please sign in to
             continue using the AI assistant.
           </DialogDescription>
         </DialogHeader>

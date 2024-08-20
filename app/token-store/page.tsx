@@ -128,7 +128,7 @@ const TokenStore = () => {
     return (model.pricePerMillionTokens * amount) / 1000000;
   };
 
-  if (!isLoaded) {
+  if (!isLoaded || !isSignedIn) {
     return <div>Loading...</div>;
   }
 
@@ -220,10 +220,7 @@ const TokenStore = () => {
             </div>
           </CardContent>
           <CardFooter>
-            <Button
-              onClick={handlePurchase}
-              disabled={isLoading || !isSignedIn}
-            >
+            <Button onClick={handlePurchase} disabled={isLoading}>
               {isLoading ? "Processing..." : "Purchase Tokens"}
             </Button>
           </CardFooter>

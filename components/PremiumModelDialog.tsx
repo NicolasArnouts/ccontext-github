@@ -30,8 +30,8 @@ const PremiumModelDialog: React.FC<PremiumModelDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Premium Model Selected</DialogTitle>
           <DialogDescription>
-            You've selected {modelName}, which is a premium model. Sign in to
-            access this and other premium features.
+            You&apos;ve selected {modelName}, which is a premium model. Sign in
+            to access this and other premium features.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

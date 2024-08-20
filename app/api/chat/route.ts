@@ -8,14 +8,35 @@ import {
   getOrCreateAnonymousUserTokens,
 } from "@/lib/helpers";
 import OpenAI from "openai";
+import { ChatCompletionMessageParam } from "openai/resources/chat/completions.mjs";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+function getMessageContent(message: ChatCompletionMessageParam): string {
+  if (typeof message.content === "string") {
+    return message.content;
+  } else if (Array.isArray(message.content)) {
+    return message.content
+      .map((part) => {
+        if ("text" in part) {
+          return part.text;
+        }
+        return "";
+      })
+      .join(" ");
+  }
+  return "";
+}
+
 export async function POST(req: NextRequest) {
   const { userId } = auth();
-  const { messages, modelId } = await req.json();
+  const {
+    messages,
+    modelId,
+  }: { messages: ChatCompletionMessageParam[]; modelId: string } =
+    await req.json();
 
   try {
     const model = await prisma.model.findUnique({ where: { id: modelId } });
@@ -44,8 +65,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (messages.length === 0) {
+      return NextResponse.json(
+        { error: "No messages provided for chat completion" },
+        { status: 400 }
+      );
+    }
+
     const inputTokens = messages.reduce((acc, message) => {
-      return acc + getInputTokens(message.content);
+      const content = getMessageContent(message);
+      return acc + getInputTokens(content);
     }, 0);
 
     if (userTokens.tokensLeft < inputTokens) {
@@ -67,6 +96,7 @@ export async function POST(req: NextRequest) {
     let responseTokens = 0;
     let responseContent = "";
 
+    // @ts-ignore
     const stream = await openai.chat.completions.create({
       model: model.name,
       messages: messages,
@@ -93,9 +123,9 @@ export async function POST(req: NextRequest) {
 
     // Use a TransformStream to update tokens after the stream is complete
     const tokenUpdateStream = new TransformStream({
-      async flush(controller) {
+      async flush() {
         // Update tokens for the response after streaming is complete
-        const updatedUserTokens = await prisma.userTokens.update({
+        await prisma.userTokens.update({
           where: { id: userTokens.id },
           data: {
             tokensLeft: Math.max(0, userTokens.tokensLeft - responseTokens),

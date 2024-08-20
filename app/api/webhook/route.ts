@@ -6,11 +6,7 @@ import Stripe from "stripe";
 
 const webhookSecret: string = process.env.STRIPE_WEBHOOK_SECRET!;
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+export const runtime = "edge";
 
 export async function POST(req: Request) {
   const buf = await req.text();

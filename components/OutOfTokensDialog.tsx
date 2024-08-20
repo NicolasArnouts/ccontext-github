@@ -28,8 +28,8 @@ const OutOfTokensDialog: React.FC<OutOfTokensDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Out of Tokens</DialogTitle>
           <DialogDescription>
-            You've used all your available tokens. Upgrade your plan to continue
-            using the AI assistant with increased limits.
+            You&apos;ve used all your available tokens. Upgrade your plan to
+            continue using the AI assistant with increased limits.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
