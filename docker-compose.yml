@@ -24,24 +24,8 @@ services:
     networks:
       - app-network
 
-  # Uncomment and configure if you need a local database
-  # db:
-  #   image: postgres:13
-  #   environment:
-  #     - POSTGRES_USER=${DB_USER}
-  #     - POSTGRES_PASSWORD=${DB_PASSWORD}
-  #     - POSTGRES_DB=${DB_NAME}
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   networks:
-  #     - app-network
-
-  # Add any other services your application needs, e.g., Redis, Elasticsearch, etc.
-
 volumes:
   temp_environments:
-  # Uncomment if using a local database
-  # postgres_data:
 
 networks:
   app-network:

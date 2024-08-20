@@ -20,6 +20,9 @@ RUN pipx install ccontext
 COPY package*.json ./
 COPY prisma ./prisma/
 
+# Copy .env file
+COPY .env ./
+
 # Install Node.js dependencies
 RUN npm ci
 
