@@ -4,7 +4,7 @@ FROM node:20-alpine
 # Install system dependencies
 RUN apk add --no-cache \
     python3 \
-    pipx \
+    py3-pip \
     git \
     libc6-compat \
     make \
@@ -14,7 +14,7 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 # Install Python dependencies
-RUN pipx install ccontext
+RUN pip install ccontext --break-system-packages
 
 # Copy package files
 COPY package*.json ./
