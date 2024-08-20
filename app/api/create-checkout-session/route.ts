@@ -22,20 +22,31 @@ export async function POST(req: Request) {
     const pricePerMillionTokens = model.pricePerMillionTokens;
     const cost = (pricePerMillionTokens * amount) / 1000000;
 
-    // Ensure the minimum charge is at least $0.50
-    const minCharge = 0.5;
-    const finalCost = Math.max(cost, minCharge);
+    // Ensure the minimum charge is at least 2 euros
+    const minCharge = 2;
+
+    // Check if the cost is below the minimum and return an error if so
+    if (cost < minCharge) {
+      return NextResponse.json(
+        {
+          error: `The minimum purchase amount is €${minCharge.toFixed(
+            2
+          )}. Please increase the number of tokens.`,
+        },
+        { status: 400 }
+      );
+    }
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
         {
           price_data: {
-            currency: "usd",
+            currency: "eur",
             product_data: {
-              name: `${amount} Tokens`,
+              name: `${amount} Tokens for ${model.name}`,
             },
-            unit_amount: Math.round(finalCost * 100), // Stripe expects amount in cents
+            unit_amount: Math.round(cost * 100), // Stripe expects amount in cents
           },
           quantity: 1,
         },

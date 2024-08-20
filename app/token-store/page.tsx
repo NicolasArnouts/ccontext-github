@@ -102,19 +102,15 @@ const TokenStore = () => {
         body: JSON.stringify({ modelId: selectedModel, amount: tokenAmount }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Network response was not ok");
+        // Handle the error from the server
+        throw new Error(data.error || "An unexpected error occurred");
       }
 
-      const { url } = await response.json();
-
-      console.log("url", url);
-
-      // Use replace instead of assign to prevent going back to an intermediary page
-      window.location.replace(url);
-
-      // Prevent further execution
-      return;
+      // If successful, redirect to the Stripe checkout
+      window.location.replace(data.url);
     } catch (error) {
       console.error("Error processing purchase:", error);
       toast({
@@ -129,7 +125,6 @@ const TokenStore = () => {
       setIsLoading(false);
     }
   };
-
   const calculateCost = (model: Model, amount: number) => {
     return (model.pricePerMillionTokens * amount) / 1000000;
   };

@@ -2,6 +2,8 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import stripe from "@/lib/stripe";
+import prisma from "@/lib/prismadb";
+import Stripe from "stripe";
 
 const webhookSecret: string = process.env.STRIPE_WEBHOOK_SECRET!;
 
@@ -38,21 +40,21 @@ export async function POST(req: Request) {
       : 0;
 
     // Update user's token balance in your database
-    // await prisma.userTokens.upsert({
-    //   where: { userId_modelId: { userId, modelId } },
-    //   update: { tokensLeft: { increment: amount } },
-    //   create: { userId, modelId, tokensLeft: amount },
-    // });
+    await prisma.userTokens.upsert({
+      where: { userId_modelId: { userId, modelId } },
+      update: { tokensLeft: { increment: amount } },
+      create: { userId, modelId, tokensLeft: amount },
+    });
 
     // Record the purchase in your database
-    // await prisma.purchase.create({
-    //   data: {
-    //     userId,
-    //     modelId,
-    //     amount,
-    //     cost: session.amount_total ? session.amount_total / 100 : 0,
-    //   },
-    // });
+    await prisma.purchase.create({
+      data: {
+        userId,
+        modelId,
+        amount,
+        cost: session.amount_total ? session.amount_total / 100 : 0,
+      },
+    });
   }
 
   return NextResponse.json({ received: true });
