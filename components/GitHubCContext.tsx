@@ -169,6 +169,13 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
           : "Clone and Run CContext"}
       </Button>
 
+      {calculatedTokens && (
+        <div className="flex flex-wrap  justify-center text-center items-center gap-2">
+          <span className="text-sm">Repo Tokens:</span>
+          <span className="font-bold">{calculatedTokens.toLocaleString()}</span>
+        </div>
+      )}
+
       {/* <CommandOutput
         calculatedTokens={calculatedTokens}
         output={output}

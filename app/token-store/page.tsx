@@ -105,11 +105,9 @@ const TokenStore = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        // Handle the error from the server
         throw new Error(data.error || "An unexpected error occurred");
       }
 
-      // If successful, redirect to the Stripe checkout
       window.location.replace(data.url);
     } catch (error) {
       console.error("Error processing purchase:", error);
@@ -125,6 +123,7 @@ const TokenStore = () => {
       setIsLoading(false);
     }
   };
+
   const calculateCost = (model: Model, amount: number) => {
     return (model.pricePerMillionTokens * amount) / 1000000;
   };
@@ -175,6 +174,24 @@ const TokenStore = () => {
               </div>
               <div>
                 <label
+                  htmlFor="current-balance"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Current Balance
+                </label>
+                <Input
+                  id="current-balance"
+                  type="text"
+                  value={
+                    tokensLeft !== null
+                      ? tokensLeft.toLocaleString()
+                      : "Loading..."
+                  }
+                  disabled
+                />
+              </div>
+              <div>
+                <label
                   htmlFor="token-amount"
                   className="block text-sm font-medium mb-1"
                 >
@@ -215,21 +232,10 @@ const TokenStore = () => {
         <Card>
           <CardHeader>
             <CardTitle>Token Usage</CardTitle>
-            <CardDescription>
-              Your current token balance and usage tips
-            </CardDescription>
+            <CardDescription>Your token usage and tips</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold">Current Balance</h3>
-                <p className="text-2xl font-bold">
-                  {tokensLeft !== null
-                    ? tokensLeft.toLocaleString()
-                    : "Loading..."}{" "}
-                  tokens
-                </p>
-              </div>
               <div>
                 <h3 className="text-lg font-semibold">Token Usage Tips</h3>
                 <ul className="list-disc list-inside space-y-2">

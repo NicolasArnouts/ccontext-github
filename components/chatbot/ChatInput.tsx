@@ -246,12 +246,15 @@ const ChatInput: React.FC<ChatInputProps> = ({
             <div className="flex flex-col items-center gap-2 pr-2">
               <div className="text-sm text-gray-600 dark:text-gray-300">
                 <div className="">
-                  Chat cost: {typeof tokenCost === "number" ? tokenCost : "N/A"}
+                  Chat cost:{" "}
+                  {typeof tokenCost === "number"
+                    ? tokenCost.toLocaleString()
+                    : "N/A"}
                 </div>
                 <div className="">
                   Tokens left:{" "}
                   {typeof currentTokensLeft === "number"
-                    ? currentTokensLeft
+                    ? currentTokensLeft.toLocaleString()
                     : "N/A"}
                 </div>
 
