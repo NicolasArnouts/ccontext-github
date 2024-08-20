@@ -5,7 +5,6 @@ import {
   getOrCreateUserTokens,
   getInputTokens,
 } from "@/lib/helpers";
-import { encoding_for_model } from "tiktoken";
 
 export async function GET(req: NextRequest) {
   const userInfo = await getUserInfo(req);
@@ -54,9 +53,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const encoder = encoding_for_model("gpt-4o");
-    const tokensUsed = encoder.encode(message).length;
-
+    const tokensUsed = getInputTokens(message);
     const hasEnoughTokens = userTokens.tokensLeft >= tokensUsed;
 
     if (hasEnoughTokens) {

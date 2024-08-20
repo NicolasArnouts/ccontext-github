@@ -1,5 +1,9 @@
 "use client";
 
+import { getEncoding } from "js-tiktoken";
+
+const encoding = getEncoding("cl100k_base");
+
 export function debounce<F extends (...args: any[]) => any>(
   func: F,
   waitFor: number
@@ -17,13 +21,8 @@ export function debounce<F extends (...args: any[]) => any>(
   };
 }
 
-import { getEncoding } from "js-tiktoken";
 export function getInputTokens(input: string): number {
-  const encoding = getEncoding("cl100k_base");
-
   const tokens = encoding.encode(input).length;
-
-  console.log("getInputTokens tokens", tokens);
 
   return tokens;
 }

@@ -186,11 +186,10 @@ export function stripAnsiCodes(str: string): string {
   return str.replace(/\x1B[[(?);]{0,2}(;?\d)*./g, "");
 }
 
+const encoder = encoding_for_model("gpt-4o-mini");
 export function getInputTokens(
   messages: ChatMessage | ChatMessage[] | string
 ): number {
-  const encoder = encoding_for_model("gpt-4o-mini");
-
   const processMessage = (message: ChatMessage): number => {
     return encoder.encode(message.content).length;
   };
