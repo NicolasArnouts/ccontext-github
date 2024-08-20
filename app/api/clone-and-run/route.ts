@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { rateLimit } from "@/lib/rate-limit";
 import prismadb from "@/lib/prismadb";
 import fs from "fs";
 import path from "path";
@@ -25,7 +24,13 @@ export async function POST(req: NextRequest) {
     try {
       validateGitHubUrl(githubUrl);
     } catch (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      if (error instanceof Error) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+      return NextResponse.json(
+        { error: "Invalid GitHub URL" },
+        { status: 400 }
+      );
     }
 
     const sanitizedCommand = sanitizeInput(ccontextCommand);
@@ -92,6 +97,9 @@ export async function POST(req: NextRequest) {
       });
     } catch (error) {
       console.error("Error during command execution:", error);
+      if (error instanceof Error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
       return NextResponse.json(
         { error: "An error occurred during command execution" },
         { status: 500 }
@@ -99,11 +107,11 @@ export async function POST(req: NextRequest) {
     }
   } catch (error) {
     console.error("Error:", error);
-    if (error.message === "Rate limit exceeded") {
+    if (error instanceof Error && error.message === "Rate limit exceeded") {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
     return NextResponse.json(
-      { error: error.message || "An error occurred" },
+      { error: "An unexpected error occurred" },
       { status: 500 }
     );
   }
