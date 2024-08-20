@@ -5,6 +5,7 @@ import {
   getOrCreateUserTokens,
   getInputTokens,
   stripAnsiCodes,
+  UserInfo,
 } from "@/lib/helpers";
 import OpenAI from "openai";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions.mjs";
@@ -29,7 +30,42 @@ function getMessageContent(message: ChatCompletionMessageParam): string {
   return "";
 }
 
+async function saveMessage(
+  userInfo: UserInfo,
+  role: "user" | "assistant",
+  content: string,
+  order: number
+) {
+  await prisma.chatMessage.create({
+    data: {
+      userId: userInfo.isAnonymous ? null : userInfo.id,
+      sessionId: userInfo.id,
+      role,
+      content,
+      order,
+    },
+  });
+}
+
+async function updateUserTokens(
+  userTokensId: string,
+  tokensUsed: number
+): Promise<void> {
+  await prisma.userTokens.update({
+    where: { id: userTokensId },
+    data: {
+      tokensLeft: {
+        decrement: tokensUsed,
+      },
+      lastRequestTime: new Date(),
+    },
+  });
+}
+
 export async function POST(req: NextRequest) {
+  let responseTokens = 0;
+  let responseContent = "";
+
   try {
     const userInfo = await getUserInfo(req);
     const {
@@ -83,67 +119,86 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    let responseTokens = 0;
-    let responseContent = "";
+    // Save user message
+    await saveMessage(
+      userInfo,
+      "user",
+      getMessageContent(messages[messages.length - 1]),
+      messages.length - 1
+    );
 
-    // @ts-ignore
     const stream = await openai.chat.completions.create({
       model: model.name,
       messages: messages,
       stream: true,
     });
 
+    const encoder = new TextEncoder();
+
     const readableStream = new ReadableStream({
       async start(controller) {
-        for await (const chunk of stream) {
-          const content = chunk.choices[0]?.delta?.content || "";
-          responseTokens += getInputTokens(content);
-          responseContent += content;
-          controller.enqueue(new TextEncoder().encode(content));
+        try {
+          for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content || "";
+            const contentTokens = getInputTokens(content);
+
+            // Check if user has enough tokens for this chunk
+            if (userTokens.tokensLeft < responseTokens + contentTokens) {
+              throw new Error("Not enough tokens to continue streaming");
+            }
+
+            responseTokens += contentTokens;
+            responseContent += content;
+            controller.enqueue(encoder.encode(content));
+          }
+          controller.close();
+        } catch (error) {
+          console.error("Error during streaming:", error);
+          controller.error(error);
+        } finally {
+          if (responseTokens > 0) {
+            await updateUserTokens(userTokens.id, responseTokens);
+            await saveMessage(
+              userInfo,
+              "assistant",
+              responseContent,
+              messages.length
+            );
+          }
         }
-        controller.close();
       },
     });
 
-    // Prepare headers for the response
-    const responseHeaders = new Headers({
-      "Content-Type": "text/plain; charset=utf-8",
-      "X-Tokens-Used-Input": inputTokens.toString(),
-    });
-
-    // Use a TransformStream to update tokens after the stream is complete
-    const tokenUpdateStream = new TransformStream({
-      async flush() {
-        // Update tokens for the response after streaming is complete
-        await prisma.userTokens.update({
-          where: { id: userTokens.id },
-          data: {
-            tokensLeft: Math.max(0, userTokens.tokensLeft - responseTokens),
-            lastRequestTime: new Date(),
-          },
-        });
-
-        // Save the chat message
-        await prisma.chatMessage.create({
-          data: {
-            userId: userInfo.isAnonymous ? null : userInfo.id,
-            sessionId: userInfo.id,
-            role: "assistant",
-            content: responseContent,
-            order: messages.length,
-          },
-        });
+    return new Response(readableStream, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "X-Tokens-Used-Input": inputTokens.toString(),
       },
-    });
-
-    return new Response(readableStream.pipeThrough(tokenUpdateStream), {
-      headers: responseHeaders,
     });
   } catch (error) {
     console.error("Error in chat API:", error);
+
+    let errorMessage =
+      "An unexpected error occurred during the chat completion.";
+    let statusCode = 500;
+
+    if (error instanceof Error) {
+      errorMessage = error.message;
+
+      // Specific error handling
+      if (errorMessage.includes("Not enough tokens")) {
+        statusCode = 403;
+      } else if (errorMessage.includes("Invalid model")) {
+        statusCode = 400;
+      }
+    }
+
     return NextResponse.json(
-      { error: "An error occurred during the chat completion." },
-      { status: 500 }
+      {
+        error: errorMessage,
+        partialResponse: responseContent,
+      },
+      { status: statusCode }
     );
   }
 }
