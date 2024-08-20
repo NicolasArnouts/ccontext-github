@@ -49,12 +49,30 @@ export class TempEnvManager {
     return path.join(userDir, repoSlug);
   }
 
-  async createOrUpdateRepository(repoUrl: string, userId: string | null) {
+  async createOrUpdateRepository(repoUrl: string, userId: string) {
     validateGitHubUrl(repoUrl);
 
     const slug = await generateRepoSlug(repoUrl);
     const userDir = this.getUserDir(userId);
     const repoFilePath = path.join(userDir, slug);
+
+    // Check if userId is provided (which would be the sessionId for anonymous users)
+    if (userId) {
+      const anonymousSession = await prismadb.anonymousSession.findUnique({
+        where: { sessionId: userId },
+      });
+
+      if (!anonymousSession) {
+        // Create the anonymous session if it doesn't exist
+        await prismadb.anonymousSession.create({
+          data: {
+            sessionId: userId,
+            ipAddress: "unknown", // You might want to pass this as a parameter
+          },
+        });
+        console.log(`Anonymous session created with ID: ${userId}`);
+      }
+    }
 
     let repository = userId
       ? await prismadb.repository.findFirst({
@@ -86,28 +104,22 @@ export class TempEnvManager {
       }
     }
 
-    // Always update or create the repository entry in the database if userId is provided
-    if (userId) {
-      repository = await prismadb.repository.upsert({
-        where: {
-          slug: slug,
-        },
-        update: {
-          url: repoUrl,
-          userId: userId,
-        },
-        create: {
-          slug: slug,
-          url: repoUrl,
-          userId: userId,
-        },
-      });
+    repository = await prismadb.repository.upsert({
+      where: {
+        slug: slug,
+      },
+      update: {
+        url: repoUrl,
+        userId: userId,
+      },
+      create: {
+        slug: slug,
+        url: repoUrl,
+        userId: userId,
+      },
+    });
 
-      console.log("Repository upserted:", repository);
-    } else {
-      repository = { slug, url: repoUrl, userId: null };
-      console.log("Anonymous repository created:", repository);
-    }
+    console.log("Repository upserted:", repository);
 
     return repository;
   }
@@ -126,7 +138,7 @@ export class TempEnvManager {
   async runCommand(
     repositoryId: string,
     command: string,
-    userId: string | null
+    userId: string
   ): Promise<{
     stdout: string;
     stderr: string;
@@ -189,7 +201,7 @@ export class TempEnvManager {
     const result = await execAsync(fullCommand);
 
     // Extract file tree from the command output
-    const fileTree = extractFileTreeFromOutput(result.stdout);
+    const fileTree = extractFileTreeFromOutput(result.stdout) || "";
 
     // Get markdown content if it exists
     const markdownContent = await this.getMarkdownIfExists(repoPath);
