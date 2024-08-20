@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
-// next.config.json
-const nextConfig = {};
-
-export default nextConfig;
+const nextConfig = {
+    output: 'standalone',
+    experimental: {
+      outputFileTracingRoot: undefined,
+    },
+  };
+  
+  export default nextConfig;

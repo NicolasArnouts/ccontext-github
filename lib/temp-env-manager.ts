@@ -19,13 +19,17 @@ export class TempEnvManager {
 
   constructor(lifetime = 12 * 60 * 60) {
     // 12 hours default lifetime
+    // Use TEMP_ENV_BASE_DIR environment variable if set, otherwise use a default path
     this.baseDir =
-      "/Users/narn/Desktop/school/ccontext-github/temp_environments";
+      process.env.TEMP_ENV_BASE_DIR ||
+      path.join(process.cwd(), "temp_environments");
     this.lifetime = lifetime;
 
     if (!fs.existsSync(this.baseDir)) {
       fs.mkdirSync(this.baseDir, { recursive: true });
     }
+
+    console.log(`TempEnvManager initialized with baseDir: ${this.baseDir}`);
 
     // Set up periodic cleanup
     setInterval(() => this.cleanupExpiredRepositories(), 60 * 60 * 1000); // Run every hour
@@ -35,7 +39,7 @@ export class TempEnvManager {
     const dirName = userId || "anonymous";
     const userDir = path.join(this.baseDir, dirName);
     if (!fs.existsSync(userDir)) {
-      fs.mkdirSync(userDir, { recursive: true });
+      fs.mkdirSync(userDir, { recursive: true, mode: 0o755 });
     }
     return userDir;
   }

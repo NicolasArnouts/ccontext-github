@@ -38,3 +38,4 @@ next-env.d.ts
 
 # TEMP FOLDERS
 temp_environments
+/temp_environments
