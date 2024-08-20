@@ -1,13 +1,13 @@
 // app/api/create-checkout-session/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import stripe from "@/lib/stripe";
 import prisma from "@/lib/prismadb";
-import { getOrCreateAnonymousUser, getUserId, isAnonUser } from "@/lib/helpers";
+import { getUserId, isAnonUser } from "@/lib/helpers";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const userId = getUserId(req);
+    const userId = await getUserId(req);
     if (isAnonUser(userId)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

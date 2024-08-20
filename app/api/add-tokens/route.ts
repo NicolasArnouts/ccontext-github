@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prismadb";
 import { getUserId, isAnonUser } from "@/lib/helpers";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const userId = getUserId(req);
+    const userId = await getUserId(req);
     if (isAnonUser(userId)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

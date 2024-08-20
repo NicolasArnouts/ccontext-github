@@ -1,20 +1,29 @@
 // app/api/save-message/route.ts
-import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prismadb";
 import { getUserId } from "@/lib/helpers";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const userId = getUserId(req);
+    const userId = await getUserId(req);
     const { role, content, sessionId } = await req.json();
+
+    // Get the highest order for the current session
+    const highestOrder = await prisma.chatMessage.findFirst({
+      where: { sessionId },
+      orderBy: { order: "desc" },
+      select: { order: true },
+    });
+
+    const newOrder = (highestOrder?.order ?? -1) + 1;
 
     const message = await prisma.chatMessage.create({
       data: {
-        userId: userId,
+        userId,
         sessionId,
         role,
         content,
+        order: newOrder,
       },
     });
 
