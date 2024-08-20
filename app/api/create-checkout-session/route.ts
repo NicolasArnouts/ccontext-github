@@ -22,14 +22,14 @@ export async function POST(req: Request) {
     const pricePerMillionTokens = model.pricePerMillionTokens;
     const cost = (pricePerMillionTokens * amount) / 1000000;
 
-    // Ensure the minimum charge is at least 2 euros
+    // Ensure the minimum charge is at least 2 dollars
     const minCharge = 2;
 
     // Check if the cost is below the minimum and return an error if so
     if (cost < minCharge) {
       return NextResponse.json(
         {
-          error: `The minimum purchase amount is €${minCharge.toFixed(
+          error: `The minimum purchase amount is $${minCharge.toFixed(
             2
           )}. Please increase the number of tokens.`,
         },
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       line_items: [
         {
           price_data: {
-            currency: "eur",
+            currency: "usd",
             product_data: {
               name: `${amount} Tokens for ${model.name}`,
             },

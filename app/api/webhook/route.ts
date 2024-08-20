@@ -1,4 +1,3 @@
-// app/api/webhooks/route.ts
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import stripe from "@/lib/stripe";
@@ -37,24 +36,43 @@ export async function POST(req: Request) {
     const modelId = session.metadata?.modelId;
     const amount = session.metadata?.amount
       ? parseInt(session.metadata.amount)
-      : 0;
+      : undefined;
 
-    // Update user's token balance in your database
-    await prisma.userTokens.upsert({
-      where: { userId_modelId: { userId, modelId } },
-      update: { tokensLeft: { increment: amount } },
-      create: { userId, modelId, tokensLeft: amount },
-    });
+    // Check if any required metadata is missing
+    if (!userId || !modelId || amount === undefined) {
+      console.error("Missing required metadata in session", session.metadata);
+      return NextResponse.json(
+        { error: "Missing required metadata in session" },
+        { status: 400 }
+      );
+    }
 
-    // Record the purchase in your database
-    await prisma.purchase.create({
-      data: {
-        userId,
-        modelId,
-        amount,
-        cost: session.amount_total ? session.amount_total / 100 : 0,
-      },
-    });
+    try {
+      // Update user's token balance in your database
+      await prisma.userTokens.upsert({
+        where: { userId_modelId: { userId, modelId } },
+        update: { tokensLeft: { increment: amount } },
+        create: { userId, modelId, tokensLeft: amount },
+      });
+
+      // Record the purchase in your database
+      await prisma.purchase.create({
+        data: {
+          userId,
+          modelId,
+          amount,
+          cost: session.amount_total ? session.amount_total / 100 : 0,
+        },
+      });
+
+      return NextResponse.json({ received: true });
+    } catch (error) {
+      console.error("Error processing webhook:", error);
+      return NextResponse.json(
+        { error: "Error processing webhook" },
+        { status: 500 }
+      );
+    }
   }
 
   return NextResponse.json({ received: true });
