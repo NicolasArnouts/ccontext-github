@@ -1,7 +1,3 @@
-"use client";
-
-// components/chatbot/ChatInput.tsx
-
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { ArrowUp } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
@@ -10,10 +6,8 @@ import { Model } from "@prisma/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useGithubCContextStore } from "@/lib/store";
 import { getInputTokens, debounce } from "@/lib/helpers-client";
-import SignInModal from "@/components/SignInModal";
 import OutOfTokensDialog from "@/components/OutOfTokensDialog";
 import PremiumModelDialog from "@/components/PremiumModelDialog";
-import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 
 interface ChatInputProps {
@@ -35,11 +29,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [models, setModels] = useState<Model[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(true);
   const [isCheckingTokens, setIsCheckingTokens] = useState(false);
-  const [showSignInModal, setShowSignInModal] = useState(false);
   const [showOutOfTokensDialog, setShowOutOfTokensDialog] = useState(false);
   const [showPremiumModelDialog, setShowPremiumModelDialog] = useState(false);
+
   const { toast } = useToast();
-  const { isSignedIn, isLoaded } = useUser();
 
   const { tokenCost, selectedModel, setSelectedModel, setTokenCost } =
     useGithubCContextStore();
@@ -173,24 +166,16 @@ const ChatInput: React.FC<ChatInputProps> = ({
           setInputValue("");
           setTokenCost(0); // Reset token cost after submission
         } else {
-          if (isSignedIn) {
-            setShowOutOfTokensDialog(true);
-          } else {
-            setShowSignInModal(true);
-          }
+          setShowOutOfTokensDialog(true);
         }
       }
     },
-    [inputValue, onSubmit, selectedModel, checkTokens, setTokenCost, isSignedIn]
+    [inputValue, onSubmit, selectedModel, checkTokens, setTokenCost]
   );
 
   const handleModelSelect = (modelId: string) => {
     const selectedModelData = models.find((model) => model.id === modelId);
-    if (
-      selectedModelData &&
-      selectedModelData.tags.includes("Premium") &&
-      !isSignedIn
-    ) {
+    if (selectedModelData && selectedModelData.tags.includes("Premium")) {
       setShowPremiumModelDialog(true);
     } else {
       setSelectedModel(modelId);
@@ -200,7 +185,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const handleUpgrade = () => {
     // Implement upgrade logic here
     console.log("Upgrade plan");
-    // For now, we'll just close the dialog
+    // For now, we'll just close the dialogs
     setShowOutOfTokensDialog(false);
     setShowPremiumModelDialog(false);
   };
@@ -230,7 +215,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             </button>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2  justify-between items-center mt-2">
+          <div className="flex flex-col sm:flex-row gap-2 justify-between items-center mt-2">
             {isLoadingModels ? (
               <div className="text-sm text-gray-600 dark:text-gray-300">
                 Loading models...
@@ -269,11 +254,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
           </div>
         </div>
       </form>
-
-      <SignInModal
-        isOpen={showSignInModal}
-        onClose={() => setShowSignInModal(false)}
-      />
 
       <OutOfTokensDialog
         isOpen={showOutOfTokensDialog}

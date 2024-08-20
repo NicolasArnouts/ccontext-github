@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prismadb";
 import {
-  getInputTokens,
-  getOrCreateAnonymousUser,
+  getUserInfo,
   getOrCreateUserTokens,
-  getOrCreateAnonymousUserTokens,
+  getInputTokens,
+  stripAnsiCodes,
 } from "@/lib/helpers";
 import OpenAI from "openai";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions.mjs";
@@ -31,14 +30,14 @@ function getMessageContent(message: ChatCompletionMessageParam): string {
 }
 
 export async function POST(req: NextRequest) {
-  const { userId } = auth();
-  const {
-    messages,
-    modelId,
-  }: { messages: ChatCompletionMessageParam[]; modelId: string } =
-    await req.json();
-
   try {
+    const userInfo = await getUserInfo(req);
+    const {
+      messages,
+      modelId,
+    }: { messages: ChatCompletionMessageParam[]; modelId: string } =
+      await req.json();
+
     const model = await prisma.model.findUnique({ where: { id: modelId } });
     if (!model) {
       return NextResponse.json(
@@ -47,18 +46,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let userTokens;
-    let clientId: string;
+    let userTokens = await getOrCreateUserTokens(userInfo, modelId);
 
-    if (userId) {
-      clientId = userId;
-      userTokens = await getOrCreateUserTokens(userId, modelId);
-    } else {
-      clientId = await getOrCreateAnonymousUser(req);
-      userTokens = await getOrCreateAnonymousUserTokens(clientId, modelId);
-    }
-
-    if (model.tags.includes("Premium") && !userId) {
+    if (model.tags.includes("Premium") && userInfo.isAnonymous) {
       return NextResponse.json(
         { error: "Authentication required for premium models" },
         { status: 403 }
@@ -136,8 +126,8 @@ export async function POST(req: NextRequest) {
         // Save the chat message
         await prisma.chatMessage.create({
           data: {
-            userId: userId || null,
-            sessionId: clientId,
+            userId: userInfo.isAnonymous ? null : userInfo.id,
+            sessionId: userInfo.id,
             role: "assistant",
             content: responseContent,
             order: messages.length,

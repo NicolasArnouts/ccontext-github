@@ -1,8 +1,6 @@
-// app/api/clone-and-run/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import prismadb from "@/lib/prismadb";
-import { auth } from "@clerk/nextjs/server";
 import fs from "fs";
 import path from "path";
 import {
@@ -11,17 +9,17 @@ import {
   validateGitHubUrl,
   stripAnsiCodes,
   extractFileTreeContent,
+  getUserInfo,
 } from "@/lib/helpers";
 import { TempEnvManager } from "@/lib/temp-env-manager";
 
 const tempEnvManager = new TempEnvManager();
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { userId } = auth();
-    console.log("userId:", userId);
+    const userInfo = await getUserInfo(req);
+    console.log("userInfo:", userInfo);
 
-    // getting vars from body content
     const { githubUrl, ccontextCommand } = await req.json();
 
     try {
@@ -35,24 +33,32 @@ export async function POST(req: Request) {
     const repositoryId = await generateRepoSlug(githubUrl);
 
     try {
-      let repo = await tempEnvManager.getRepository(repositoryId, userId);
+      let repo = await tempEnvManager.getRepository(repositoryId, userInfo.id);
 
       if (
         !repo ||
-        !tempEnvManager.repoExistsInFileSystem(repositoryId, userId)
+        !tempEnvManager.repoExistsInFileSystem(repositoryId, userInfo.id)
       ) {
-        // Repo does not exist in database or file system
         console.log("Repo does not exist in database or file system");
 
-        // Create or update the repository
-        repo = await tempEnvManager.createOrUpdateRepository(githubUrl, userId);
+        repo = await tempEnvManager.createOrUpdateRepository(
+          githubUrl,
+          userInfo.id
+        );
       }
 
-      // Run ccontext command
-      const { stdout, stderr, markdownContent } =
-        await tempEnvManager.runCommand(repo.slug, sanitizedCommand, userId);
+      if (!repo) {
+        throw new Error("Failed to create or retrieve repository");
+      }
 
-      if (userId) {
+      const { stdout, stderr, markdownContent } =
+        await tempEnvManager.runCommand(
+          repo.slug,
+          sanitizedCommand,
+          userInfo.id
+        );
+
+      if (!userInfo.isAnonymous) {
         await prismadb.run.create({
           data: {
             repositoryId: repo.slug,
@@ -61,18 +67,18 @@ export async function POST(req: Request) {
         });
       }
 
-      // Strip ANSI codes from stdout and stderr
       const cleanStdout = stripAnsiCodes(stdout);
 
-      // Extract the file tree content
       const parsedFileTree = markdownContent
         ? extractFileTreeContent(markdownContent)
         : null;
 
-      // Check if PDF exists
       const baseDir =
         "/Users/narn/Desktop/school/ccontext-github/temp_environments";
-      const userDir = path.join(baseDir, userId || "anonymous");
+      const userDir = path.join(
+        baseDir,
+        userInfo.isAnonymous ? "anonymous" : userInfo.id
+      );
       const repoPath = path.join(userDir, repo.slug);
       const pdfPath = path.join(repoPath, "ccontext-output.pdf");
       const pdfExists = fs.existsSync(pdfPath);

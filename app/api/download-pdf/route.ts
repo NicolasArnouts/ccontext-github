@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { auth } from "@clerk/nextjs/server";
+import { getUserId, isAnonUser } from "@/lib/helpers";
 
 export async function GET(request: Request) {
-  const { userId } = auth();
+  const userId = getUserId(request);
 
   const { searchParams } = new URL(request.url);
   const envId = searchParams.get("envId");
@@ -18,7 +19,8 @@ export async function GET(request: Request) {
 
   const baseDir =
     "/Users/narn/Desktop/school/ccontext-github/temp_environments";
-  const userDir = path.join(baseDir, userId || "anonymous");
+  const userPathName = isAnonUser(userId) ? "anonymous" : userId;
+  const userDir = path.join(baseDir, userPathName);
   const repoPath = path.join(userDir, envId);
   const pdfPath = path.join(repoPath, "ccontext-output.pdf");
 

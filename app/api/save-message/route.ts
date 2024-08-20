@@ -2,15 +2,16 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prismadb";
+import { getUserId } from "@/lib/helpers";
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
+    const userId = getUserId(req);
     const { role, content, sessionId } = await req.json();
 
     const message = await prisma.chatMessage.create({
       data: {
-        userId: userId || null,
+        userId: userId,
         sessionId,
         role,
         content,

@@ -1,61 +1,14 @@
-import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prismadb";
-import { getClientIpAddress } from "@/lib/helpers";
+import {
+  getUserInfo,
+  getOrCreateUserTokens,
+  getInputTokens,
+} from "@/lib/helpers";
 import { encoding_for_model } from "tiktoken";
 
-async function getOrCreateUserTokens(
-  userId: string | null,
-  modelId: string,
-  clientIp: string
-) {
-  if (userId) {
-    return prisma.userTokens.upsert({
-      where: { userId_modelId: { userId, modelId } },
-      update: {},
-      create: { userId, modelId, tokensLeft: 1000 },
-    });
-  } else {
-    const cleanIp = clientIp.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-    const anonymousId = `anon_${cleanIp}`;
-
-    let anonymousSession = await prisma.anonymousSession.findFirst({
-      where: { sessionId: anonymousId },
-      include: { userTokens: true },
-    });
-
-    if (!anonymousSession) {
-      anonymousSession = await prisma.anonymousSession.create({
-        data: {
-          sessionId: anonymousId,
-          ipAddress: clientIp,
-          userTokens: {
-            create: { modelId, tokensLeft: 1000 },
-          },
-        },
-        include: { userTokens: true },
-      });
-    }
-
-    const userTokens = anonymousSession.userTokens.find(
-      (ut) => ut.modelId === modelId
-    );
-    if (userTokens) {
-      return userTokens;
-    } else {
-      return prisma.userTokens.create({
-        data: {
-          modelId,
-          tokensLeft: 1000,
-          anonymousSessionId: anonymousSession.id,
-        },
-      });
-    }
-  }
-}
-
-export async function GET(req: Request) {
-  const { userId } = auth();
+export async function GET(req: NextRequest) {
+  const userInfo = await getUserInfo(req);
   const { searchParams } = new URL(req.url);
   const modelId = searchParams.get("modelId");
 
@@ -67,8 +20,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const clientIp = getClientIpAddress(req);
-    const userTokens = await getOrCreateUserTokens(userId, modelId, clientIp);
+    const userTokens = await getOrCreateUserTokens(userInfo, modelId);
 
     return NextResponse.json({ remainingTokens: userTokens.tokensLeft });
   } catch (error) {
@@ -80,8 +32,8 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
-  const { userId } = auth();
+export async function POST(req: NextRequest) {
+  const userInfo = await getUserInfo(req);
   const { message, modelId } = await req.json();
 
   if (!modelId || !message) {
@@ -92,8 +44,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const clientIp = getClientIpAddress(req);
-    let userTokens = await getOrCreateUserTokens(userId, modelId, clientIp);
+    let userTokens = await getOrCreateUserTokens(userInfo, modelId);
 
     const model = await prisma.model.findUnique({ where: { id: modelId } });
     if (!model) {
@@ -107,6 +58,17 @@ export async function POST(req: Request) {
     const tokensUsed = encoder.encode(message).length;
 
     const hasEnoughTokens = userTokens.tokensLeft >= tokensUsed;
+
+    if (hasEnoughTokens) {
+      // Update tokens
+      userTokens = await prisma.userTokens.update({
+        where: { id: userTokens.id },
+        data: {
+          tokensLeft: userTokens.tokensLeft - tokensUsed,
+          lastRequestTime: new Date(),
+        },
+      });
+    }
 
     return NextResponse.json({
       success: hasEnoughTokens,

@@ -3,11 +3,12 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import stripe from "@/lib/stripe";
 import prisma from "@/lib/prismadb";
+import { getOrCreateAnonymousUser, getUserId, isAnonUser } from "@/lib/helpers";
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
-    if (!userId) {
+    const userId = getUserId(req);
+    if (isAnonUser(userId)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
