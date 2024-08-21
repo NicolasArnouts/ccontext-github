@@ -34,15 +34,11 @@ export async function GET(req: NextRequest) {
 
   const repoPath = tempEnvManager.getRepoPath(userInfo.id, repository.slug);
 
-  // Construct the command
-  let command = ["ccontext", "-m", parsedMaxTokens.toString()];
-  if (generateMarkdown) command.push("-gm");
-  if (includes) command.push("-i", includes);
-  if (excludes) command.push("-e", excludes);
+  const cmdString = `ccontext -m ${parsedMaxTokens} -e "${excludes}" -i ${includes} -gm -g`;
 
   const stream = new ReadableStream({
     start(controller) {
-      const process = spawn(command[0], command.slice(1), {
+      const process = spawn(cmdString, {
         cwd: repoPath,
         shell: true,
       });
@@ -60,11 +56,15 @@ export async function GET(req: NextRequest) {
       });
 
       process.on("close", (code) => {
-        controller.enqueue(
-          `data: ${JSON.stringify({
-            output: `\nProcess exited with code ${code}`,
-          })}\n\n`
-        );
+        if (code === 0) {
+          controller.enqueue(
+            `data: ${JSON.stringify({ status: "success" })}\n\n`
+          );
+        } else {
+          controller.enqueue(
+            `data: ${JSON.stringify({ status: "error", code })}\n\n`
+          );
+        }
         controller.close();
       });
     },

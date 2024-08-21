@@ -17,9 +17,9 @@ const CommandOutput: React.FC<CommandOutputProps> = ({
   return (
     <div className="w-full">
       <div>
-        {calculatedTokens !== null && (
+        {/* {calculatedTokens !== null && (
           <CalculatedTokens tokens={calculatedTokens} />
-        )}
+        )} */}
         <h3 className="text-lg font-semibold mb-2 text-foreground">
           Command Output:
         </h3>
