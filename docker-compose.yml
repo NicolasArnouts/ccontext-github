@@ -1,0 +1,32 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - temp_environments:/app/temp_environments
+      - ./:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=production
+      - TEMP_ENV_BASE_DIR=/app/temp_environments
+      - DATABASE_URL=${DATABASE_URL}
+      - STRIPE_API_KEY=${STRIPE_API_KEY}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+    restart: unless-stopped
+    networks:
+      - app-network
+
+volumes:
+  temp_environments:
+
+networks:
+  app-network:
+    driver: bridge

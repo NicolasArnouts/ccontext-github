@@ -1,97 +1,286 @@
-"use client"
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/use-toast";
+import axios from "axios";
+import ParsedFileTree from "@/components/ParsedFileTree";
+import { useGithubCContextStore } from "@/lib/store";
+import { parseCommandOutput } from "@/lib/helpers-client";
+import CommandOutput from "@/components/CommandOutput";
 
-import React, { useState, useCallback } from 'react'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/components/ui/use-toast"
-import axios from 'axios'
-import FileTree from './FileTree'
-import { debounce } from '@/lib/helpers'
+interface GitHubCContextProps {
+  onMarkdownGenerated: (content: string) => void;
+}
 
-const GitHubCContext = () => {
-  const [githubUrl, setGithubUrl] = useState('')
-  const [ccontextCommand, setCcontextCommand] = useState('ccontext -gm')
-  const [output, setOutput] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
+const GitHubCContext: React.FC<GitHubCContextProps> = ({
+  onMarkdownGenerated,
+}) => {
+  const {
+    githubUrl,
+    output,
+    markdownContent,
+    pdfExists,
+    isLoading,
+    envId,
+    fileTree,
+    calculatedTokens,
+    setGithubUrl,
+    setOutput,
+    setMarkdownContent,
+    setPdfExists,
+    setIsLoading,
+    setEnvId,
+    setFileTree,
+    setCalculatedTokens,
+  } = useGithubCContextStore();
 
-  const debouncedSetGithubUrl = useCallback(
-    debounce((value: string) => setGithubUrl(value), 300),
-    []
-  )
+  const [maxTokens, setMaxTokens] = useState("100000");
+  const [includes, setIncludes] = useState("");
+  const [excludes, setExcludes] = useState("");
+  const [isCloned, setIsCloned] = useState(false);
+  const { toast } = useToast();
 
-  const debouncedSetCcontextCommand = useCallback(
-    debounce((value: string) => setCcontextCommand(value), 300),
-    []
-  )
+  const handleGithubUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setGithubUrl(e.target.value);
+  };
 
-  const handleCloneAndRun = async () => {
+  const handleClone = async () => {
     try {
-      setIsLoading(true)
-      setOutput('Processing...')
-      const response = await axios.post('/api/clone-and-run', {
-        githubUrl,
-        ccontextCommand,
-      })
-      setOutput(response.data.output || response.data.error)
-      toast({
-        title: "Success",
-        description: "Command executed successfully.",
-      })
+      setIsLoading(true);
+      setOutput("Cloning repository...");
+      const response = await axios.post("/api/clone", { githubUrl });
+      setEnvId(response.data.repositoryId);
+      setIsCloned(true);
+      // toast({
+      //   title: "Success",
+      //   description: "Repository cloned successfully.",
+      // });
     } catch (error) {
-      console.error('Error:', error)
+      console.error("Error:", error);
+      let errorMessage = "An error occurred while cloning the repository.";
+      if (axios.isAxiosError(error) && error.response) {
+        errorMessage = error.response.data.error || errorMessage;
+      }
       toast({
         title: "Error",
-        description: "An error occurred while processing your request.",
+        description: errorMessage,
         variant: "destructive",
-      })
-      setOutput("An error occurred while processing your request.")
+      });
+      setOutput(errorMessage);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
+
+  const handleRunCContext = async () => {
+    try {
+      setIsLoading(true);
+      setOutput("Running CContext...");
+      setMarkdownContent(null);
+      setPdfExists(false);
+      setFileTree(null);
+      setCalculatedTokens(null);
+
+      const ccontextCommand = `-m ${maxTokens} ${
+        includes ? `-i ${includes}` : ""
+      } ${excludes ? `-e ${excludes}` : ""} -gm`;
+
+      const eventSource = new EventSource(
+        `/api/run-ccontext?envId=${envId}&command=${encodeURIComponent(
+          ccontextCommand
+        )}`
+      );
+
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        setOutput((prevOutput) => prevOutput + data.output);
+      };
+
+      eventSource.onerror = (error) => {
+        console.error("EventSource error:", error);
+        eventSource.close();
+        setIsLoading(false);
+        toast({
+          title: "Error",
+          description: "An error occurred while running CContext.",
+          variant: "destructive",
+        });
+      };
+
+      eventSource.addEventListener("close", () => {
+        eventSource.close();
+        setIsLoading(false);
+        const { fileTree, calculatedTokens } = parseCommandOutput(output);
+        setFileTree(fileTree);
+        setCalculatedTokens(calculatedTokens);
+        // Fetch the final result
+        fetchFinalResult();
+      });
+    } catch (error) {
+      console.error("Error:", error);
+      let errorMessage = "An error occurred while running CContext.";
+      if (axios.isAxiosError(error) && error.response) {
+        errorMessage = error.response.data.error || errorMessage;
+      }
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      setOutput(errorMessage);
+      setIsLoading(false);
+    }
+  };
+
+  const fetchFinalResult = async () => {
+    try {
+      const response = await axios.get(`/api/ccontext-result?envId=${envId}`);
+      setMarkdownContent(response.data.markdownContent || null);
+      setPdfExists(response.data.pdfExists || false);
+    } catch (error) {
+      console.error("Error fetching final result:", error);
+    }
+  };
 
   const handleCopyToClipboard = (content: string) => {
-    navigator.clipboard.writeText(content)
+    navigator.clipboard.writeText(content);
     toast({
       title: "Copied!",
       description: "Content copied to clipboard.",
-    })
-  }
+    });
+  };
+
+  const handleDownloadMarkdown = () => {
+    if (markdownContent) {
+      const blob = new Blob([markdownContent], { type: "text/markdown" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "ccontext-output.md";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({
+        title: "Downloaded!",
+        description: "Markdown file has been downloaded.",
+      });
+    }
+  };
+
+  const handleDownloadPdf = () => {
+    if (pdfExists && envId) {
+      window.open(`/api/download-pdf?envId=${envId}`, "_blank");
+      toast({
+        title: "Downloaded!",
+        description: "PDF file has been downloaded.",
+      });
+    }
+  };
+
+  const handleChatWithAI = () => {
+    if (markdownContent) {
+      onMarkdownGenerated(markdownContent);
+    } else {
+      toast({
+        title: "No content available",
+        description: "Please run CContext to generate content first.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="space-y-4">
       <Input
         placeholder="Enter GitHub URL"
-        defaultValue={githubUrl}
-        onChange={(e) => debouncedSetGithubUrl(e.target.value)}
+        id="github-url"
+        value={githubUrl}
+        onChange={handleGithubUrlChange}
+        className="bg-background text-foreground"
       />
-      <Input
-        placeholder="CContext command"
-        defaultValue={ccontextCommand}
-        onChange={(e) => debouncedSetCcontextCommand(e.target.value)}
-      />
-
-      <Button onClick={handleCloneAndRun} className='flex w-full' disabled={isLoading}>
-        {isLoading ? 'Processing...' : 'Clone and Run CContext'}
+      <Button
+        onClick={handleClone}
+        className="flex w-full"
+        disabled={isLoading || isCloned}
+      >
+        {isLoading ? "Cloning..." : isCloned ? "Cloned" : "Clone Repository"}
       </Button>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Command Output:</h3>
-          <Textarea
-            placeholder="Output will appear here..."
-            value={output}
-            readOnly
-            className="h-64 font-mono text-sm mb-2"
-          />
-          {output && (
-            <Button onClick={() => handleCopyToClipboard(output)} className='flex w-full mb-4'>Copy Output to Clipboard</Button>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
 
-export default GitHubCContext
+      {isCloned && (
+        <>
+          <Input
+            placeholder="Max Tokens (default: 10000)"
+            id="max-tokens"
+            value={maxTokens}
+            onChange={(e) => setMaxTokens(e.target.value)}
+            className="bg-background text-foreground"
+          />
+          <Input
+            placeholder="Includes (separated by |)"
+            id="includes"
+            value={includes}
+            onChange={(e) => setIncludes(e.target.value)}
+            className="bg-background text-foreground"
+          />
+          <Input
+            placeholder="Excludes (separated by |)"
+            id="excludes"
+            value={excludes}
+            onChange={(e) => setExcludes(e.target.value)}
+            className="bg-background text-foreground"
+          />
+          <Button
+            onClick={handleRunCContext}
+            className="flex w-full"
+            disabled={isLoading}
+          >
+            {isLoading ? "Running CContext..." : "Run CContext"}
+          </Button>
+        </>
+      )}
+
+      {calculatedTokens && (
+        <div className="flex flex-wrap justify-center text-center items-center gap-2">
+          <span className="text-sm">Repo Tokens:</span>
+          <span className="font-bold">{calculatedTokens.toLocaleString()}</span>
+        </div>
+      )}
+
+      <CommandOutput
+        calculatedTokens={calculatedTokens}
+        output={output}
+        handleCopyToClipboard={handleCopyToClipboard}
+      />
+
+      {fileTree && <ParsedFileTree fileTree={fileTree} />}
+
+      {(markdownContent || pdfExists) && (
+        <div>
+          <h3 className="text-lg font-semibold mb-2 text-foreground">
+            Generated Content:
+          </h3>
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {markdownContent && (
+                <Button onClick={handleDownloadMarkdown} className="flex-grow">
+                  Download Markdown
+                </Button>
+              )}
+              {pdfExists && (
+                <Button onClick={handleDownloadPdf} className="flex-grow">
+                  Download PDF
+                </Button>
+              )}
+              <Button onClick={handleChatWithAI} className="flex-grow">
+                Chat with AI
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default GitHubCContext;

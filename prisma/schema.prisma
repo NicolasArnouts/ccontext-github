@@ -12,27 +12,33 @@ datasource db {
 }
 
 model Repository {
-  id            String   @id @default(uuid())
-  name          String
-  url           String
-  userId        String
-  latestVersion String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  slug String @id @unique
+
+  name String?
+  url  String
+
+  userId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   runs Run[]
 
   @@index([userId])
+  @@index([slug])
 }
 
 model Run {
-  id           String   @id @default(uuid())
-  repositoryId String
-  output       String   @db.Text
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id String @id @default(uuid())
 
-  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  repositoryId String
+
+  output String @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  repository Repository @relation(fields: [repositoryId], references: [slug], onDelete: Cascade)
 
   @@index([repositoryId])
 }
@@ -44,4 +50,71 @@ model UserSubscription {
   stripeSubscriptionId   String?   @unique @map(name: "stripe_subscription_id")
   stripePriceId          String?   @map(name: "stripe_price_id")
   stripeCurrentPeriodEnd DateTime? @map(name: "stripe_current_period_end")
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  userId    String?
+  sessionId String
+  role      String
+  content   String   @db.Text
+  order     Int
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([sessionId, order])
+}
+
+model Model {
+  id                    String       @id @default(uuid())
+  name                  String       @unique
+  tags                  String[]
+  pricePerMillionTokens Float
+  userTokens            UserTokens[]
+  purchases             Purchase[]
+}
+
+model UserTokens {
+  id                 String            @id @default(uuid())
+  userId             String?
+  modelId            String
+  tokensLeft         Int
+  resetTimestamp     DateTime?
+  lastRequestTime    DateTime?
+  anonymousSession   AnonymousSession? @relation(fields: [anonymousSessionId], references: [id])
+  anonymousSessionId String?
+
+  model Model @relation(fields: [modelId], references: [id])
+
+  @@unique([userId, modelId])
+  @@unique([anonymousSessionId, modelId])
+  @@index([userId])
+  @@index([modelId])
+  @@index([anonymousSessionId])
+}
+
+model AnonymousSession {
+  id         String       @id @default(uuid())
+  sessionId  String       @unique
+  ipAddress  String
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  userTokens UserTokens[]
+
+  @@index([ipAddress])
+}
+
+model Purchase {
+  id        String   @id @default(uuid())
+  userId    String
+  modelId   String
+  amount    Int
+  cost      Float
+  createdAt DateTime @default(now())
+
+  model Model @relation(fields: [modelId], references: [id])
+
+  @@index([userId])
+  @@index([modelId])
 }

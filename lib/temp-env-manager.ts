@@ -1,84 +1,175 @@
-import fs from 'fs';
-import path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+// lib/temp-env-manager.ts
+import fs from "fs";
+import path from "path";
+import { exec } from "child_process";
+import { promisify } from "util";
+import axios from "axios";
+import prismadb from "@/lib/prismadb";
+import {
+  validateGitHubUrl,
+  sanitizeInput,
+  generateRepoSlug,
+  extractFileTreeFromOutput,
+} from "@/lib/helpers";
 
 const execAsync = promisify(exec);
 
 export class TempEnvManager {
   private baseDir: string;
   private lifetime: number;
-  private environments: { [key: string]: { path: string; createdAt: number } };
 
-  constructor(baseDir?: string, lifetime = 3600) {
-    this.baseDir = baseDir || path.join(process.cwd(), 'temp_environments');
+  constructor(lifetime = 12 * 60 * 60) {
+    // 12 hours default lifetime
+    this.baseDir =
+      process.env.TEMP_ENV_BASE_DIR ||
+      path.join(process.cwd(), "temp_environments");
     this.lifetime = lifetime;
-    this.environments = {};
 
     if (!fs.existsSync(this.baseDir)) {
       fs.mkdirSync(this.baseDir, { recursive: true });
     }
+
+    console.log(`TempEnvManager initialized with baseDir: ${this.baseDir}`);
+
+    // Set up periodic cleanup
+    setInterval(() => this.cleanupExpiredRepositories(), 60 * 60 * 1000); // Run every hour
   }
 
-  async createEnvironment(repoUrl: string): Promise<string> {
-    const envId = `env_${Date.now()}`;
-    const envPath = path.join(this.baseDir, envId);
+  private getUserDir(userId: string | null): string {
+    const dirName = userId || "anonymous";
+    const userDir = path.join(this.baseDir, dirName);
+    if (!fs.existsSync(userDir)) {
+      fs.mkdirSync(userDir, { recursive: true, mode: 0o755 });
+    }
+    return userDir;
+  }
 
-    await fs.promises.mkdir(envPath, { recursive: true });
+  public getRepoPath(userId: string | null, repoSlug: string): string {
+    const userDir = this.getUserDir(userId);
+    return path.join(userDir, repoSlug);
+  }
 
-    try {
-      // Clone the repository
-      await execAsync(`git clone ${repoUrl} ${envPath}`);
+  async createOrUpdateRepository(repoUrl: string, userId: string) {
+    validateGitHubUrl(repoUrl);
 
-      // Create a virtual environment
-      await execAsync(`python3 -m venv ${path.join(envPath, 'venv')}`);
+    const slug = await generateRepoSlug(repoUrl);
+    const userDir = this.getUserDir(userId);
+    const repoFilePath = path.join(userDir, slug);
 
-      // Install ccontext in the virtual environment
-      const pipPath = path.join(envPath, 'venv', 'bin', 'pip');
-      await execAsync(`${pipPath} install ccontext`);
+    if (userId) {
+      const anonymousSession = await prismadb.anonymousSession.findUnique({
+        where: { sessionId: userId },
+      });
 
-      this.environments[envId] = {
-        path: envPath,
-        createdAt: Date.now(),
-      };
+      if (!anonymousSession) {
+        await prismadb.anonymousSession.create({
+          data: {
+            sessionId: userId,
+            ipAddress: "unknown",
+          },
+        });
+        console.log(`Anonymous session created with ID: ${userId}`);
+      }
+    }
 
-      return envId;
-    } catch (error) {
-      await this.deleteEnvironment(envId);
-      throw error;
+    let repository = userId
+      ? await prismadb.repository.findFirst({
+          where: { slug, userId },
+        })
+      : null;
+
+    const cloneRepo = async () => {
+      console.log(`cloning repo to ${repoFilePath}`);
+      await execAsync(`git clone ${repoUrl} ${repoFilePath}`);
+    };
+
+    if (repository) {
+      console.log("Repository exists in the database");
+
+      if (!this.repoExistsInFileSystem(slug, userId)) {
+        console.log("Repository doesn't exist on the file system, cloning it");
+        await cloneRepo();
+      } else {
+        console.log("Repository exists on the file system, no action needed");
+      }
+    } else {
+      console.log("Repository doesn't exist in the database");
+      if (!this.repoExistsInFileSystem(slug, userId)) {
+        await cloneRepo();
+      }
+    }
+
+    repository = await prismadb.repository.upsert({
+      where: {
+        slug: slug,
+      },
+      update: {
+        url: repoUrl,
+        userId: userId,
+      },
+      create: {
+        slug: slug,
+        url: repoUrl,
+        userId: userId,
+      },
+    });
+
+    console.log("Repository upserted:", repository);
+
+    return repository;
+  }
+
+  repoExistsInFileSystem(slug: string, userId: string | null): boolean {
+    const repoPath = this.getRepoPath(userId, slug);
+    const isExisting = fs.existsSync(repoPath);
+
+    if (isExisting) {
+      console.log("Repository exists in the file system");
+    }
+
+    return isExisting;
+  }
+
+  async getRepository(repositoryId: string, userId: string | null) {
+    if (userId) {
+      return await prismadb.repository.findFirst({
+        where: { slug: repositoryId, userId },
+      });
+    } else {
+      const repoPath = this.getRepoPath(null, repositoryId);
+      if (fs.existsSync(repoPath)) {
+        return { slug: repositoryId, url: "", userId: null };
+      }
+      return null;
     }
   }
 
-  async runCommand(envId: string, command: string): Promise<{ stdout: string; stderr: string }> {
-    if (!this.environments[envId]) {
-      throw new Error('Environment not found');
+  async cleanupExpiredRepositories(): Promise<void> {
+    const expirationDate = new Date(Date.now() - this.lifetime * 1000);
+    const expiredRepos = await prismadb.repository.findMany({
+      where: { updatedAt: { lt: expirationDate } },
+    });
+
+    for (const repo of expiredRepos) {
+      const userDir = this.getUserDir(repo.userId);
+      const repoPath = path.join(userDir, repo.slug);
+      if (fs.existsSync(repoPath)) {
+        await fs.promises.rm(repoPath, { recursive: true, force: true });
+      }
+      await prismadb.repository.delete({ where: { slug: repo.slug } });
     }
 
-    const envPath = this.environments[envId].path;
-    const activateScript = path.join(envPath, 'venv', 'bin', 'activate');
-    
-    // Modify the command to ensure ccontext is only called once
-    const modifiedCommand = command.startsWith('ccontext') ? command : `ccontext -gm`; // ${command}
-    
-    const fullCommand = `source ${activateScript} && cd ${envPath} && ${modifiedCommand}`;
-    return execAsync(fullCommand);
-  }
-
-  async cleanupExpiredEnvironments(): Promise<void> {
-    const currentTime = Date.now();
-    const expiredEnvs = Object.entries(this.environments)
-      .filter(([, env]) => currentTime - env.createdAt > this.lifetime * 1000)
-      .map(([envId]) => envId);
-
-    for (const envId of expiredEnvs) {
-      await this.deleteEnvironment(envId);
-    }
-  }
-
-  private async deleteEnvironment(envId: string): Promise<void> {
-    if (this.environments[envId]) {
-      await fs.promises.rm(this.environments[envId].path, { recursive: true, force: true });
-      delete this.environments[envId];
+    // Cleanup anonymous repositories
+    const anonymousDir = this.getUserDir(null);
+    if (fs.existsSync(anonymousDir)) {
+      const anonymousRepos = await fs.promises.readdir(anonymousDir);
+      for (const repo of anonymousRepos) {
+        const repoPath = path.join(anonymousDir, repo);
+        const stats = await fs.promises.stat(repoPath);
+        if (stats.mtime.getTime() < expirationDate.getTime()) {
+          await fs.promises.rm(repoPath, { recursive: true, force: true });
+        }
+      }
     }
   }
 }
