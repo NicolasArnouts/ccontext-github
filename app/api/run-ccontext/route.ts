@@ -21,7 +21,8 @@ export async function GET(req: NextRequest) {
   }
 
   // Validate maxTokens
-  const parsedMaxTokens = maxTokens ? parseInt(maxTokens, 10) : 100000;
+  // const parsedMaxTokens = maxTokens ? parseInt(maxTokens, 10) : 10000;
+  const parsedMaxTokens = 10000;
   if (isNaN(parsedMaxTokens) || parsedMaxTokens <= 0) {
     return new Response("Invalid maxTokens value", { status: 400 });
   }
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest) {
 
   const repoPath = tempEnvManager.getRepoPath(userInfo.id, repository.slug);
 
-  const cmdString = `ccontext -m ${parsedMaxTokens} -e "${excludes}" -i ${includes} -gm -g`;
+  const cmdString = `ccontext -m 10000 -e "${excludes}" -i ${includes} -gm -g`;
 
   const stream = new ReadableStream({
     start(controller) {

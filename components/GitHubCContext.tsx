@@ -233,13 +233,13 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
 
       {isCloned && (
         <>
-          <Input
+          {/* <Input
             placeholder="Max Tokens (default: 10000)"
             id="max-tokens"
             value={maxTokens}
             onChange={(e) => setMaxTokens(e.target.value)}
             className="bg-background text-foreground"
-          />
+          /> */}
           <Input
             placeholder="Includes (separated by |)"
             id="includes"
