@@ -200,7 +200,8 @@ const TokenStore = () => {
                 <Input
                   id="token-amount"
                   type="number"
-                  value={tokenAmount}
+                  value={tokenAmount.toLocaleString()}
+                  minLength={1}
                   onChange={(e) => setTokenAmount(Number(e.target.value))}
                   min={1000}
                   step={1000}

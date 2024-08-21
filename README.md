@@ -1,73 +1,127 @@
-CContext GitHub
-CContext GitHub is a powerful web application that allows users to clone GitHub repositories, run CContext commands, and chat with an AI about the generated content. This tool is designed to streamline the process of analyzing and understanding codebases, making it an invaluable resource for developers, code reviewers, and anyone interested in exploring GitHub projects.
-Features
+# 🚀 GitHub CContext
 
-GitHub Repository Integration: Easily clone and analyze any public GitHub repository.
-CContext Command Execution: Run CContext commands on the cloned repositories to generate insightful reports.
-AI-Powered Chat Interface: Engage in conversations with an AI about the generated content, asking questions and gaining deeper insights into the codebase.
-File Tree Visualization: View the structure of the analyzed repository through an interactive file tree.
-Markdown and PDF Output: Generate and download reports in both Markdown and PDF formats.
-User Authentication: Secure user accounts powered by Clerk for managing personal repositories and analysis history.
-Dark Mode Support: Toggle between light and dark themes for comfortable viewing in any environment.
+Supercharge your GitHub exploration with AI-powered insights! 🧠💡
 
-Getting Started
-Prerequisites
+Chat with any Github Codebase!
 
-Node.js (v14 or later)
-npm or yarn
-PostgreSQL database
+## 🌟 Features
 
-Installation
+- 🔍 Clone and analyze any public GitHub repository
+- 🤖 Run CContext commands for in-depth code analysis
+- 💬 Chat with AI about the generated content
+- 🌳 Interactive file tree visualization
+- 📊 Markdown and PDF report generation
+- 🔐 Secure user authentication with Clerk
+- 🌓 Dark mode support for comfortable viewing
 
-Clone the repository:
-Copygit clone https://github.com/yourusername/ccontext-github.git
-cd ccontext-github
+## 🚀 Getting Started
 
-Install dependencies:
-Copynpm install
+### Prerequisites
 
-Set up environment variables:
-Create a .env.local file in the root directory and add the following variables:
-CopyDATABASE_URL=your_postgresql_database_url
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
-CLERK_SECRET_KEY=your_clerk_secret_key
+- Node.js (v14 or later)
+- npm or yarn
+- PostgreSQL database
 
-Run database migrations:
-Copynpx prisma migrate dev
+### Installation
 
-Start the development server:
-Copynpm run dev
+1. Clone the repository:
 
-Open http://localhost:3000 in your browser to see the application.
+   ```
+   git clone https://github.com/yourusername/github-ccontext.git
+   cd github-ccontext
+   ```
 
-Usage
+2. Install dependencies:
 
-Sign in using your Clerk account.
-Enter a GitHub repository URL in the input field.
-Specify the CContext command you want to run.
-Click "Clone and Run CContext" to analyze the repository.
-View the generated output, file tree, and download options.
-Use the chat interface to ask questions about the analyzed codebase.
+   ```
+   npm install
+   ```
 
-Contributing
-We welcome contributions to the CContext GitHub project! Please follow these steps to contribute:
+3. Set up environment variables:
+   Create a `.env.local` file in the root directory and add the following:
 
-Fork the repository.
-Create a new branch for your feature or bug fix.
-Make your changes and commit them with descriptive commit messages.
-Push your changes to your fork.
-Submit a pull request to the main repository.
+   ```
+   DATABASE_URL=your_postgresql_database_url
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+   CLERK_SECRET_KEY=your_clerk_secret_key
+   STRIPE_API_KEY=your_stripe_api_key
+   NEXT_PUBLIC_APP_URL=your_app_url
+   OPENAI_API_KEY=your_openai_api_key
+   STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+   ```
 
-Please ensure that your code follows the existing style conventions and includes appropriate tests.
-License
-This project is licensed under the MIT License - see the LICENSE file for details.
-Acknowledgments
+4. Run database migrations:
 
-Next.js for the React framework
-Clerk for authentication
-Prisma for database ORM
-Tailwind CSS for styling
-Vercel for hosting and deployment
+   ```
+   npx prisma migrate dev
+   ```
 
-Support
+5. Start the development server:
+
+   ```
+   npm run dev
+   ```
+
+6. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+
+## 🧑‍💻 Usage
+
+1. Sign in using your Clerk account
+2. Enter a GitHub repository URL
+3. Specify the CContext command you want to run
+4. Click "Clone and Run CContext" to analyze the repository
+5. Explore the generated output, file tree, and download options
+6. Use the chat interface to ask questions about the analyzed codebase
+
+## 💰 Token System
+
+- Users start with a free allocation of tokens
+- Different models have varying token costs
+- Premium models offer advanced features and higher token limits
+- Tokens can be purchased through the integrated Stripe payment system
+
+## 🛠️ Tech Stack
+
+- Next.js 14
+- React
+- TypeScript
+- Tailwind CSS
+- Prisma ORM
+- PostgreSQL
+- Clerk Authentication
+- Stripe Payment Integration
+- OpenAI API
+
+## 🤝 Contributing
+
+We welcome contributions! Please follow these steps:
+
+1. Fork the repository
+2. Create a new branch: `git checkout -b feature/your-feature-name`
+3. Make your changes and commit them: `git commit -m 'Add some feature'`
+4. Push to the branch: `git push origin feature/your-feature-name`
+5. Submit a pull request
+
+Please ensure your code follows the existing style conventions and includes appropriate tests.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Next.js for the React framework
+- Clerk for authentication
+- Prisma for database ORM
+- Tailwind CSS for styling
+- Vercel for hosting and deployment
+- OpenAI for AI capabilities
+- Stripe for payment processing
+
+## 📞 Support
+
 If you encounter any issues or have questions, please file an issue on the GitHub repository or contact the maintainers directly.
+
+---
+
+Built with ❤️ by [Your Name/Team Name]

@@ -1,3 +1,4 @@
+// lib/temp-env-manager.ts
 import fs from "fs";
 import path from "path";
 import { exec } from "child_process";
@@ -19,7 +20,6 @@ export class TempEnvManager {
 
   constructor(lifetime = 12 * 60 * 60) {
     // 12 hours default lifetime
-    // Use TEMP_ENV_BASE_DIR environment variable if set, otherwise use a default path
     this.baseDir =
       process.env.TEMP_ENV_BASE_DIR ||
       path.join(process.cwd(), "temp_environments");
@@ -44,7 +44,7 @@ export class TempEnvManager {
     return userDir;
   }
 
-  private getRepoPath(userId: string | null, repoSlug: string): string {
+  public getRepoPath(userId: string | null, repoSlug: string): string {
     const userDir = this.getUserDir(userId);
     return path.join(userDir, repoSlug);
   }
@@ -56,18 +56,16 @@ export class TempEnvManager {
     const userDir = this.getUserDir(userId);
     const repoFilePath = path.join(userDir, slug);
 
-    // Check if userId is provided (which would be the sessionId for anonymous users)
     if (userId) {
       const anonymousSession = await prismadb.anonymousSession.findUnique({
         where: { sessionId: userId },
       });
 
       if (!anonymousSession) {
-        // Create the anonymous session if it doesn't exist
         await prismadb.anonymousSession.create({
           data: {
             sessionId: userId,
-            ipAddress: "unknown", // You might want to pass this as a parameter
+            ipAddress: "unknown",
           },
         });
         console.log(`Anonymous session created with ID: ${userId}`);
@@ -80,7 +78,6 @@ export class TempEnvManager {
         })
       : null;
 
-    // inner function for cloning the repository
     const cloneRepo = async () => {
       console.log(`cloning repo to ${repoFilePath}`);
       await execAsync(`git clone ${repoUrl} ${repoFilePath}`);
@@ -89,7 +86,6 @@ export class TempEnvManager {
     if (repository) {
       console.log("Repository exists in the database");
 
-      // Repository exists in the database, check if it exists on the file system
       if (!this.repoExistsInFileSystem(slug, userId)) {
         console.log("Repository doesn't exist on the file system, cloning it");
         await cloneRepo();
@@ -98,7 +94,6 @@ export class TempEnvManager {
       }
     } else {
       console.log("Repository doesn't exist in the database");
-      // Repository doesn't exist in the database
       if (!this.repoExistsInFileSystem(slug, userId)) {
         await cloneRepo();
       }
@@ -135,103 +130,18 @@ export class TempEnvManager {
     return isExisting;
   }
 
-  async runCommand(
-    repositoryId: string,
-    command: string,
-    userId: string
-  ): Promise<{
-    stdout: string;
-    stderr: string;
-    markdownContent?: string;
-    fileTree?: string;
-  }> {
-    let repository;
+  async getRepository(repositoryId: string, userId: string | null) {
     if (userId) {
-      repository = await prismadb.repository.findFirst({
+      return await prismadb.repository.findFirst({
         where: { slug: repositoryId, userId },
       });
     } else {
       const repoPath = this.getRepoPath(null, repositoryId);
       if (fs.existsSync(repoPath)) {
-        repository = { slug: repositoryId, url: "", userId: null };
+        return { slug: repositoryId, url: "", userId: null };
       }
+      return null;
     }
-
-    if (!repository) {
-      console.log(
-        `Repository not found: ${repositoryId} for user ${
-          userId || "anonymous"
-        }`
-      );
-      throw new Error("Repository not found for this user");
-    }
-
-    console.log("Running command:", command);
-    console.log("Repository:", repository);
-
-    const repoPath = this.getRepoPath(userId, repository.slug);
-
-    const repoExists = this.repoExistsInFileSystem(repository.slug, userId);
-
-    console.log("repoExists:", repoExists);
-
-    if (!repoExists) {
-      console.log("Repository doesn't exist in the file system, creating it");
-      await this.createOrUpdateRepository(repository.url, userId);
-    }
-
-    // Sanitize the command input
-    let sanitizedCommand = sanitizeInput(command);
-
-    // Modify the command to ensure ccontext is only called once
-    const modifiedCommand = sanitizedCommand.startsWith("ccontext")
-      ? sanitizedCommand
-      : `ccontext ${sanitizedCommand}`;
-
-    const fullCommand = `cd ${repoPath} && ${modifiedCommand} -gm -g`;
-
-    // Update last accessed time if userId is provided
-    if (userId) {
-      await prismadb.repository.update({
-        where: { slug: repositoryId },
-        data: { updatedAt: new Date() },
-      });
-    }
-
-    const result = await execAsync(fullCommand);
-
-    // Extract file tree from the command output
-    const fileTree = extractFileTreeFromOutput(result.stdout) || "";
-
-    // Get markdown content if it exists
-    const markdownContent = await this.getMarkdownIfExists(repoPath);
-
-    return { ...result, markdownContent, fileTree };
-  }
-
-  async getMarkdownIfExists(repoPath: string): Promise<string | undefined> {
-    console.log("repoPath:", repoPath);
-
-    const markdownPath = path.join(repoPath, "ccontext-output.md");
-
-    console.log("markdownPath", markdownPath);
-
-    if (fs.existsSync(markdownPath)) {
-      console.log("Markdown file exists");
-
-      let markdownContent = "";
-
-      try {
-        markdownContent = await fs.promises.readFile(markdownPath, "utf-8");
-      } catch (error) {
-        console.error("Error reading markdown file:", error);
-      }
-
-      return markdownContent;
-    }
-    console.log("Markdown file does not exist");
-
-    return undefined;
   }
 
   async cleanupExpiredRepositories(): Promise<void> {
@@ -260,20 +170,6 @@ export class TempEnvManager {
           await fs.promises.rm(repoPath, { recursive: true, force: true });
         }
       }
-    }
-  }
-
-  async getRepository(repositoryId: string, userId: string | null) {
-    if (userId) {
-      return await prismadb.repository.findFirst({
-        where: { slug: repositoryId, userId },
-      });
-    } else {
-      const repoPath = this.getRepoPath(null, repositoryId);
-      if (fs.existsSync(repoPath)) {
-        return { slug: repositoryId, url: "", userId: null };
-      }
-      return null;
     }
   }
 }

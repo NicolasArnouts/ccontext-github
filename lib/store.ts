@@ -15,7 +15,7 @@ interface GithubCContextState {
   markdownContent: string | null;
   pdfExists: boolean;
   isLoading: boolean;
-  envId: string | null;
+  envId?: string;
   fileTree: string | null;
   calculatedTokens: number | null;
 
