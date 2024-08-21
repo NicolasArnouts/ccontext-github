@@ -7,6 +7,7 @@ import ParsedFileTree from "@/components/ParsedFileTree";
 import { useGithubCContextStore } from "@/lib/store";
 import { parseCommandOutput } from "@/lib/helpers-client";
 import CommandOutput from "@/components/CommandOutput";
+import { useChatInterface } from "@/components/chatbot/ChatInterface";
 
 interface GitHubCContextProps {
   onMarkdownGenerated: (content: string) => void;
@@ -23,6 +24,8 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
     envId,
     fileTree,
     calculatedTokens,
+    messages,
+    selectedModel,
     setGithubUrl,
     setMarkdownContent,
     setPdfExists,
@@ -30,15 +33,17 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
     setEnvId,
     setFileTree,
     setCalculatedTokens,
+    setMessages,
   } = useGithubCContextStore();
 
   const [maxTokens, setMaxTokens] = useState("100000");
   const [includes, setIncludes] = useState("");
   const [excludes, setExcludes] = useState("");
   const [isCloned, setIsCloned] = useState(false);
-  const { toast } = useToast();
-
   const [output, setOutput] = useState("");
+
+  const { toast } = useToast();
+  const { handleSendMessage } = useChatInterface();
 
   const handleGithubUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setGithubUrl(e.target.value);
@@ -50,10 +55,6 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
       const response = await axios.post("/api/clone", { githubUrl });
       setEnvId(response.data.repositoryId);
       setIsCloned(true);
-      toast({
-        title: "Success",
-        description: "Repository cloned successfully.",
-      });
     } catch (error) {
       console.error("Error:", error);
       let errorMessage = "An error occurred while cloning the repository.";
@@ -79,6 +80,8 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
       setFileTree(null);
       setCalculatedTokens(null);
 
+      let cmdOutput = "";
+
       const ccontextCommand = `-m ${maxTokens} ${
         includes ? `-i ${includes}` : ""
       } ${excludes ? `-e ${excludes}` : ""} -gm`;
@@ -92,13 +95,11 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.output) {
-          setOutput((prev) => prev + data.output);
-          const { fileTree, calculatedTokens } = parseCommandOutput(
-            data.output
-          );
+          cmdOutput += data.output;
+          setOutput(cmdOutput);
+          const { fileTree, calculatedTokens } = parseCommandOutput(cmdOutput);
           if (fileTree) {
             console.log("File tree found!", fileTree);
-
             setFileTree(fileTree);
           }
           if (calculatedTokens) {
@@ -106,10 +107,6 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
             setCalculatedTokens(calculatedTokens);
           }
         } else if (data.status === "success") {
-          // toast({
-          //   title: "Success",
-          //   description: "CContext command completed successfully.",
-          // });
           fetchFinalResult();
         } else if (data.status === "error") {
           toast({
@@ -124,20 +121,15 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
         console.error("EventSource error:", error);
         eventSource.close();
         setIsLoading(false);
-        // toast({
-        //   title: "Error",
-        //   description: "An error occurred while running CContext.",
-        //   variant: "destructive",
-        // });
       };
 
       eventSource.addEventListener("close", () => {
+        console.log('EventSource "close" event');
         eventSource.close();
         setIsLoading(false);
         const { fileTree, calculatedTokens } = parseCommandOutput(output);
         setFileTree(fileTree);
         setCalculatedTokens(calculatedTokens);
-        // Fetch the final result
         fetchFinalResult();
       });
     } catch (error) {
@@ -205,6 +197,8 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
   const handleChatWithAI = () => {
     if (markdownContent) {
       onMarkdownGenerated(markdownContent);
+      setMessages([...messages, { role: "user", content: markdownContent }]);
+      // handleSendMessage(markdownContent, selectedModel);
     } else {
       toast({
         title: "No content available",
@@ -233,13 +227,6 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
 
       {isCloned && (
         <>
-          {/* <Input
-            placeholder="Max Tokens (default: 10000)"
-            id="max-tokens"
-            value={maxTokens}
-            onChange={(e) => setMaxTokens(e.target.value)}
-            className="bg-background text-foreground"
-          /> */}
           <Input
             placeholder="Includes (separated by |)"
             id="includes"
@@ -271,19 +258,8 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
         </div>
       )}
 
-      <CommandOutput
-        calculatedTokens={calculatedTokens}
-        output={output}
-        handleCopyToClipboard={handleCopyToClipboard}
-      />
-
-      {fileTree && <ParsedFileTree fileTree={fileTree} />}
-
       {(markdownContent || pdfExists) && (
         <div>
-          <h3 className="text-lg font-semibold mb-2 text-foreground">
-            Generated Content:
-          </h3>
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
               {markdownContent && (
@@ -303,6 +279,14 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
           </div>
         </div>
       )}
+
+      {fileTree && <ParsedFileTree fileTree={fileTree} />}
+
+      <CommandOutput
+        calculatedTokens={calculatedTokens}
+        output={output}
+        handleCopyToClipboard={handleCopyToClipboard}
+      />
     </div>
   );
 };

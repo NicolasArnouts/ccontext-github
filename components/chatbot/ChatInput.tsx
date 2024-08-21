@@ -1,11 +1,15 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, use } from "react";
 import { ArrowUp } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import ModelSelector from "@/components/chatbot/ModelSelector";
 import { Model } from "@prisma/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useGithubCContextStore } from "@/lib/store";
-import { getInputTokens, debounce } from "@/lib/helpers-client";
+import {
+  getInputTokens,
+  debounce,
+  concatenateMessages,
+} from "@/lib/helpers-client";
 import OutOfTokensDialog from "@/components/OutOfTokensDialog";
 import PremiumModelDialog from "@/components/PremiumModelDialog";
 import Link from "next/link";
@@ -34,8 +38,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   const { toast } = useToast();
 
-  const { tokenCost, selectedModel, setSelectedModel, setTokenCost } =
+  const { tokenCost, selectedModel, setSelectedModel, setTokenCost, messages } =
     useGithubCContextStore();
+
+  useEffect(() => {
+    calculateTokenCost(getInputTokens(inputValue));
+  }, [messages]);
 
   useEffect(() => {
     fetchModels();
@@ -95,7 +103,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
       }, 0);
       setTokenCost(inputTokens + previousMessagesTokens);
     },
-    [previousMessages, setTokenCost]
+    [previousMessages, setTokenCost, messages]
   );
 
   const handleInputChange = useCallback(

@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
   const repoPath = tempEnvManager.getRepoPath(userInfo.id, repository.slug);
 
-  const cmdString = `ccontext -m 10000 -e "${excludes}" -i ${includes} -gm -g`;
+  const cmdString = `ccontext -m 10000000 -e "${excludes}" -i ${includes} -gm -g`;
 
   const stream = new ReadableStream({
     start(controller) {

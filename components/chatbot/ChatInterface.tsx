@@ -14,13 +14,12 @@ interface Message {
   content: string;
 }
 
-const ChatInterface: React.FC = () => {
+export const useChatInterface = () => {
   const { isLoaded, isSignedIn, user } = useUser();
   const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  // const [selectedModel, setselectedModel] = useState<string | null>(null);
 
   const {
     markdownContent,
@@ -28,16 +27,12 @@ const ChatInterface: React.FC = () => {
     setTokensLeft,
     selectedModel,
     setSelectedModel,
+    messages,
+    setMessages,
   } = useGithubCContextStore();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (markdownContent) {
-      setMessages([{ role: "system", content: markdownContent }]);
-    }
-  }, [markdownContent]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -80,10 +75,15 @@ const ChatInterface: React.FC = () => {
   const handleSendMessage = async (userInput: string, modelId: string) => {
     if (!userInput.trim()) return;
 
+    console.log("handling message", userInput, modelId);
+
     setIsLoading(true);
     setSelectedModel(modelId);
+
+    let newMessages: Message[] = [...messages];
+
     const userMessage: Message = { role: "user", content: userInput };
-    const newMessages = [...messages, userMessage];
+    newMessages.push(userMessage);
     setMessages(newMessages);
     scrollToBottom();
 
@@ -129,6 +129,32 @@ const ChatInterface: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  return {
+    isLoading,
+    showScrollButton,
+    messages,
+    messagesEndRef,
+    chatContainerRef,
+    scrollToBottom,
+    handleSendMessage,
+    tokensLeft,
+    setTokensLeft,
+  };
+};
+
+const ChatInterface: React.FC = () => {
+  const {
+    isLoading,
+    showScrollButton,
+    messages,
+    messagesEndRef,
+    chatContainerRef,
+    scrollToBottom,
+    handleSendMessage,
+    tokensLeft,
+    setTokensLeft,
+  } = useChatInterface();
 
   return (
     <div
