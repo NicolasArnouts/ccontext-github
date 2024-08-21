@@ -36,6 +36,9 @@ export class TempEnvManager {
   }
 
   private getUserDir(userId: string | null): string {
+    if (userId?.startsWith("anon")) {
+      userId = "anonymous";
+    }
     const dirName = userId || "anonymous";
     const userDir = path.join(this.baseDir, dirName);
     if (!fs.existsSync(userDir)) {
@@ -48,6 +51,11 @@ export class TempEnvManager {
     const userDir = this.getUserDir(userId);
     return path.join(userDir, repoSlug);
   }
+
+  cloneRepo = async (repoUrl: string, repoFilePath: string) => {
+    console.log(`cloning repo to ${repoFilePath}`);
+    await execAsync(`git clone ${repoUrl} ${repoFilePath}`);
+  };
 
   async createOrUpdateRepository(repoUrl: string, userId: string) {
     validateGitHubUrl(repoUrl);
@@ -78,24 +86,19 @@ export class TempEnvManager {
         })
       : null;
 
-    const cloneRepo = async () => {
-      console.log(`cloning repo to ${repoFilePath}`);
-      await execAsync(`git clone ${repoUrl} ${repoFilePath}`);
-    };
-
     if (repository) {
       console.log("Repository exists in the database");
 
       if (!this.repoExistsInFileSystem(slug, userId)) {
         console.log("Repository doesn't exist on the file system, cloning it");
-        await cloneRepo();
+        await this.cloneRepo(repoUrl, repoFilePath);
       } else {
         console.log("Repository exists on the file system, no action needed");
       }
     } else {
       console.log("Repository doesn't exist in the database");
       if (!this.repoExistsInFileSystem(slug, userId)) {
-        await cloneRepo();
+        await this.cloneRepo(repoUrl, repoFilePath);
       }
     }
 
