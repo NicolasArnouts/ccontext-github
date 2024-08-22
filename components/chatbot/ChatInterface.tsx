@@ -72,18 +72,19 @@ export const useChatInterface = () => {
     }
   }, [selectedModel, setTokensLeft]);
 
-  const handleSendMessage = async (userInput: string, modelId: string) => {
-    if (!userInput.trim()) return;
-
-    console.log("handling message", userInput, modelId);
-
+  const handleSendMessage = async (
+    userInput: string | null,
+    modelId: string
+  ) => {
     setIsLoading(true);
     setSelectedModel(modelId);
 
     let newMessages: Message[] = [...messages];
 
-    const userMessage: Message = { role: "user", content: userInput };
-    newMessages.push(userMessage);
+    if (userInput !== null) {
+      const userMessage: Message = { role: "user", content: userInput };
+      newMessages.push(userMessage);
+    }
     setMessages(newMessages);
     scrollToBottom();
 
@@ -130,6 +131,10 @@ export const useChatInterface = () => {
     }
   };
 
+  const handleTokensUpdated = (modelId: string, amount: number) => {
+    setTokensLeft(modelId, amount);
+  };
+
   return {
     isLoading,
     showScrollButton,
@@ -139,7 +144,7 @@ export const useChatInterface = () => {
     scrollToBottom,
     handleSendMessage,
     tokensLeft,
-    setTokensLeft,
+    handleTokensUpdated,
   };
 };
 
@@ -153,7 +158,7 @@ const ChatInterface: React.FC = () => {
     scrollToBottom,
     handleSendMessage,
     tokensLeft,
-    setTokensLeft,
+    handleTokensUpdated,
   } = useChatInterface();
 
   return (
@@ -176,7 +181,7 @@ const ChatInterface: React.FC = () => {
           isStreaming={isLoading}
           previousMessages={messages.map((msg) => msg.content)}
           tokensLeft={tokensLeft}
-          onTokensUpdated={setTokensLeft}
+          onTokensUpdated={handleTokensUpdated}
         />
       </div>
     </div>

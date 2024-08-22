@@ -178,9 +178,14 @@ export function extractFileTreeContent(markdownContent: string): string | null {
 }
 
 export function extractFileTreeFromOutput(output: string): string | null {
-  const fileTreeRegex = /📁[\s\S]*?Total context size:/;
-  const match = output.match(fileTreeRegex);
-  return match ? match[0].trim() : null;
+  const lines = output.split("\n");
+  const fileTreeLines = lines.filter(
+    (line) =>
+      line.trim().startsWith("📁") ||
+      line.trim().startsWith("📄") ||
+      line.trim().startsWith("[Excluded]")
+  );
+  return fileTreeLines.length > 0 ? fileTreeLines.join("\n") : null;
 }
 
 export function stripAnsiCodes(str: string): string {

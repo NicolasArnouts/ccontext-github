@@ -1,3 +1,5 @@
+// app/api/token-tracking/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prismadb";
 import {
@@ -33,16 +35,28 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const userInfo = await getUserInfo(req);
-  const { message, modelId } = await req.json();
-
-  if (!modelId || !message) {
-    return NextResponse.json(
-      { error: "Model ID and message are required" },
-      { status: 400 }
-    );
-  }
+  let message, modelId;
 
   try {
+    // Parse the request body
+    const body = await req.json();
+    message = body.message;
+    modelId = body.modelId;
+
+    // Log the received data for debugging
+    console.log("Received POST data:", { message, modelId });
+
+    // Check if required fields are present
+    if (!modelId) {
+      return NextResponse.json(
+        { error: "Model ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Allow empty messages, but ensure it's a string
+    message = message || "";
+
     let userTokens = await getOrCreateUserTokens(userInfo, modelId);
 
     const model = await prisma.model.findUnique({ where: { id: modelId } });
@@ -54,6 +68,8 @@ export async function POST(req: NextRequest) {
     }
 
     const tokensUsed = getInputTokens(message);
+    console.log("tokensUsed:", tokensUsed);
+
     const hasEnoughTokens = userTokens.tokensLeft >= tokensUsed;
 
     if (hasEnoughTokens) {
