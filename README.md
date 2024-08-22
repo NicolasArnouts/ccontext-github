@@ -2,7 +2,9 @@
 
 Supercharge your GitHub exploration with AI-powered insights! 🧠💡
 
-Chat with any Github Codebase!
+Chat with any GitHub Codebase!
+
+Live demo: [https://ghccontext.t3chnico.com/](https://ghccontext.t3chnico.com/)
 
 ## 🌟 Features
 
@@ -12,6 +14,8 @@ Chat with any Github Codebase!
 - 🌳 Interactive file tree visualization
 - 📊 Markdown and PDF report generation
 - 🔐 Secure user authentication with Clerk
+- 💰 Token system with free and premium models
+- 💳 Stripe integration for token purchases
 - 🌓 Dark mode support for comfortable viewing
 
 ## 🚀 Getting Started
@@ -21,14 +25,17 @@ Chat with any Github Codebase!
 - Node.js (v14 or later)
 - npm or yarn
 - PostgreSQL database
+- Stripe account for payment processing
+- Clerk account for authentication
+- OpenAI API key
 
 ### Installation
 
 1. Clone the repository:
 
    ```
-   git clone https://github.com/yourusername/github-ccontext.git
-   cd github-ccontext
+   git clone https://github.com/NicolasArnoutsHoGent/ccontext-github.git
+   cd ccontext-github
    ```
 
 2. Install dependencies:
@@ -38,7 +45,7 @@ Chat with any Github Codebase!
    ```
 
 3. Set up environment variables:
-   Create a `.env.local` file in the root directory and add the following:
+   Create a `.env` file in the root directory and add the following:
 
    ```
    DATABASE_URL=your_postgresql_database_url
@@ -48,6 +55,7 @@ Chat with any Github Codebase!
    NEXT_PUBLIC_APP_URL=your_app_url
    OPENAI_API_KEY=your_openai_api_key
    STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+   TEMP_ENV_BASE_DIR=/path/to/temp_environments
    ```
 
 4. Run database migrations:
@@ -56,22 +64,27 @@ Chat with any Github Codebase!
    npx prisma migrate dev
    ```
 
-5. Start the development server:
+5. Seed the database with initial data:
+
+   ```
+   npm run db:seed
+   ```
+
+6. Start the development server:
 
    ```
    npm run dev
    ```
 
-6. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+7. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
 ## 🧑‍💻 Usage
 
-1. Sign in using your Clerk account
+1. Sign in using your Clerk account or continue as an anonymous user
 2. Enter a GitHub repository URL
-3. Specify the CContext command you want to run
-4. Click "Clone and Run CContext" to analyze the repository
-5. Explore the generated output, file tree, and download options
-6. Use the chat interface to ask questions about the analyzed codebase
+3. Click "Clone Repository" to analyze the repository
+4. Explore the generated output, file tree, and download options
+5. Use the chat interface to ask questions about the analyzed codebase
 
 ## 💰 Token System
 
@@ -91,6 +104,10 @@ Chat with any Github Codebase!
 - Clerk Authentication
 - Stripe Payment Integration
 - OpenAI API
+
+## 🚀 Deployment
+
+The application is currently deployed and running at [https://ghccontext.t3chnico.com/](https://ghccontext.t3chnico.com/)
 
 ## 🤝 Contributing
 
@@ -124,4 +141,4 @@ If you encounter any issues or have questions, please file an issue on the GitHu
 
 ---
 
-Built with ❤️ by [Your Name/Team Name]
+Built with ❤️ by Nicolas Arnouts
