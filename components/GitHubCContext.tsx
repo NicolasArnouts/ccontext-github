@@ -6,15 +6,16 @@ import axios from "axios";
 import ParsedFileTree from "@/components/ParsedFileTree";
 import { useGithubCContextStore } from "@/lib/store";
 import { parseCommandOutput } from "@/lib/helpers-client";
-import CommandOutput from "@/components/CommandOutput";
 import { useChatInterface } from "@/components/chatbot/ChatInterface";
 
 interface GitHubCContextProps {
   onMarkdownGenerated: (content: string) => void;
+  onChatWithAI: () => void;
 }
 
 const GitHubCContext: React.FC<GitHubCContextProps> = ({
   onMarkdownGenerated,
+  onChatWithAI,
 }) => {
   const {
     githubUrl,
@@ -199,7 +200,7 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
     if (markdownContent) {
       onMarkdownGenerated(markdownContent);
       setMessages([...messages, { role: "user", content: markdownContent }]);
-      // handleSendMessage(markdownContent, selectedModel);
+      onChatWithAI();
     } else {
       toast({
         title: "No content available",
@@ -283,11 +284,13 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
 
       {fileTree && <ParsedFileTree fileTree={fileTree} />}
 
-      {/* <CommandOutput
+      {/* Uncomment if you want to show the command output
+      <CommandOutput
         calculatedTokens={calculatedTokens}
         output={output}
         handleCopyToClipboard={handleCopyToClipboard}
-      /> */}
+      />
+      */}
     </div>
   );
 };
