@@ -1,8 +1,9 @@
 "use client";
 
 import { getEncoding } from "js-tiktoken";
-
-const encoding = getEncoding("cl100k_base");
+import { ChatCompletionMessage } from "openai/resources/index.mjs";
+import { Message } from "@/lib/store";
+import { ChatMessage } from "@prisma/client";
 
 export function debounce<F extends (...args: any[]) => any>(
   func: F,
@@ -21,12 +22,6 @@ export function debounce<F extends (...args: any[]) => any>(
   };
 }
 
-export function getInputTokens(input: string): number {
-  const tokens = encoding.encode(input).length;
-
-  return tokens;
-}
-
 export async function getClientIpAddress(): Promise<string> {
   try {
     const response = await fetch("https://api.ipify.org?format=json");
@@ -43,9 +38,14 @@ export function cleanIpAddress(ip: string): string {
 }
 
 export function extractFileTreeFromOutput(output: string): string | null {
-  const fileTreeRegex = /📁[\s\S]*?Total context size:/;
-  const match = output.match(fileTreeRegex);
-  return match ? match[0].trim() : null;
+  const lines = output.split("\n");
+  const fileTreeLines = lines.filter(
+    (line) =>
+      line.trim().startsWith("📁") ||
+      line.trim().startsWith("📄") ||
+      line.trim().startsWith("[Excluded]")
+  );
+  return fileTreeLines.length > 0 ? fileTreeLines.join("\n") : null;
 }
 
 export function parseCommandOutput(output: string) {
@@ -58,4 +58,35 @@ export function extractCalculatedTokens(output: string): number | null {
   const tokenRegex = /Total context size:\s*(\d+)/;
   const match = output.match(tokenRegex);
   return match ? parseInt(match[1], 10) : null;
+}
+
+export function concatenateMessages(messages: Message[]): string {
+  return messages
+    .map((message) => {
+      const rolePrefix =
+        message.role === "user"
+          ? "User: "
+          : message.role === "assistant"
+          ? "Assistant: "
+          : "System: ";
+      return `${rolePrefix}${message.content}`;
+    })
+    .join("\n\n");
+}
+
+const encoding = getEncoding("cl100k_base");
+export function getInputTokens(
+  messages: ChatMessage | ChatMessage[] | string
+): number {
+  const processMessage = (message: ChatMessage): number => {
+    return encoding.encode(message.content).length;
+  };
+
+  if (typeof messages === "string") {
+    return encoding.encode(messages).length;
+  } else if (Array.isArray(messages)) {
+    return messages.reduce((acc, message) => acc + processMessage(message), 0);
+  } else {
+    return processMessage(messages);
+  }
 }

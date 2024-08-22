@@ -11,7 +11,8 @@ import OpenAI from "openai";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions.mjs";
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: "sk--FFTNxPVvULemZ1X5dPvug",
+  baseURL: "http://localhost:4000/",
 });
 
 function getMessageContent(message: ChatCompletionMessageParam): string {
@@ -119,13 +120,16 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Save user message
-    await saveMessage(
-      userInfo,
-      "user",
-      getMessageContent(messages[messages.length - 1]),
-      messages.length - 1
-    );
+    // Save user message if it exists and is not empty
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.role === "user" && lastMessage.content) {
+      await saveMessage(
+        userInfo,
+        "user",
+        getMessageContent(lastMessage),
+        messages.length - 1
+      );
+    }
 
     const stream = await openai.chat.completions.create({
       model: model.name,

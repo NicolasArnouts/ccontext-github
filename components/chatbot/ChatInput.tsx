@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { ArrowUp } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
@@ -5,13 +7,17 @@ import ModelSelector from "@/components/chatbot/ModelSelector";
 import { Model } from "@prisma/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useGithubCContextStore } from "@/lib/store";
-import { getInputTokens, debounce } from "@/lib/helpers-client";
+import {
+  getInputTokens,
+  debounce,
+  concatenateMessages,
+} from "@/lib/helpers-client";
 import OutOfTokensDialog from "@/components/OutOfTokensDialog";
 import PremiumModelDialog from "@/components/PremiumModelDialog";
 import Link from "next/link";
 
 interface ChatInputProps {
-  onSubmit: (message: string, modelId: string) => void;
+  onSubmit: (message: string | null, modelId: string) => void;
   isStreaming?: boolean;
   previousMessages: string[];
   tokensLeft: Record<string, number>;
@@ -34,19 +40,27 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   const { toast } = useToast();
 
-  const { tokenCost, selectedModel, setSelectedModel, setTokenCost } =
+  const { tokenCost, selectedModel, setSelectedModel, setTokenCost, messages } =
     useGithubCContextStore();
 
+  // Effect to calculate token cost when messages change
+  useEffect(() => {
+    calculateTokenCost(getInputTokens(inputValue));
+  }, [messages]);
+
+  // Effect to fetch models on component mount
   useEffect(() => {
     fetchModels();
   }, []);
 
+  // Effect to fetch tokens left when selected model changes
   useEffect(() => {
     if (selectedModel) {
       fetchTokensLeft(selectedModel);
     }
   }, [selectedModel]);
 
+  // Function to fetch tokens left for a model
   const fetchTokensLeft = async (modelId: string) => {
     try {
       const response = await fetch(`/api/token-tracking?modelId=${modelId}`);
@@ -59,6 +73,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
+  // Function to fetch available models
   const fetchModels = async () => {
     setIsLoadingModels(true);
     try {
@@ -95,7 +110,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
       }, 0);
       setTokenCost(inputTokens + previousMessagesTokens);
     },
-    [previousMessages, setTokenCost]
+    [previousMessages, setTokenCost, messages]
   );
 
   const handleInputChange = useCallback(
@@ -123,12 +138,15 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const checkTokens = async (message: string, modelId: string) => {
     setIsCheckingTokens(true);
     try {
+      // Log the request payload for debugging
+      console.log("Checking tokens:", { message, modelId });
+
       const response = await fetch("/api/token-tracking", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message, modelId }),
+        body: JSON.stringify({ message: message || "", modelId }),
       });
       if (!response.ok) {
         throw new Error("Failed to check tokens");
@@ -156,18 +174,33 @@ const ChatInput: React.FC<ChatInputProps> = ({
         | React.KeyboardEvent<HTMLTextAreaElement>
     ) => {
       e.preventDefault();
-      if (inputValue.trim() && selectedModel) {
+      if (selectedModel) {
+        const messageToSend = inputValue.trim() || null;
+
+        // Log for debugging
+        console.log("Submitting message:", { messageToSend, selectedModel });
+
         const hasEnoughTokens = await checkTokens(
-          inputValue.trim(),
+          messageToSend || "",
           selectedModel
         );
+
+        console.log("Has enough tokens:", hasEnoughTokens);
+
         if (hasEnoughTokens) {
-          onSubmit(inputValue.trim(), selectedModel);
+          onSubmit(messageToSend, selectedModel);
           setInputValue("");
           setTokenCost(0); // Reset token cost after submission
         } else {
           setShowOutOfTokensDialog(true);
         }
+      } else {
+        console.error("No model selected");
+        toast({
+          title: "Error",
+          description: "Please select a model before sending a message.",
+          variant: "destructive",
+        });
       }
     },
     [inputValue, onSubmit, selectedModel, checkTokens, setTokenCost]
@@ -208,14 +241,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
             />
             <button
               type="submit"
-              className="bottom-2 bg-blue-500 p-2 text-white font-bold rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="mr-1 bottom-2 shadow-lg bg-blue-500 p-2 text-white font-bold rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
               disabled={isStreaming || !selectedModel || isCheckingTokens}
             >
               <ArrowUp className="h-5 w-5" />
             </button>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 justify-between items-center mt-2">
+          <div className="flex flex-row flex-wrap gap-4 sm:gap-2 justify-center sm:justify-between items-center mt-2">
             {isLoadingModels ? (
               <div className="text-sm text-gray-600 dark:text-gray-300">
                 Loading models...

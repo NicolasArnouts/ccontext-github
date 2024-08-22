@@ -72,7 +72,8 @@ export async function getOrCreateUserTokens(
 }
 
 export function sanitizeInput(input: string): string {
-  return input.replace(/[;&|`$()]/g, "");
+  // Remove potentially dangerous characters while preserving wcmatch patterns
+  return input.replace(/[;&`$()]/g, "").replace(/\\/g, "\\\\");
 }
 
 export function validateGitHubUrl(url: string): boolean {
@@ -177,9 +178,14 @@ export function extractFileTreeContent(markdownContent: string): string | null {
 }
 
 export function extractFileTreeFromOutput(output: string): string | null {
-  const fileTreeRegex = /📁[\s\S]*?Total context size:/;
-  const match = output.match(fileTreeRegex);
-  return match ? match[0].trim() : null;
+  const lines = output.split("\n");
+  const fileTreeLines = lines.filter(
+    (line) =>
+      line.trim().startsWith("📁") ||
+      line.trim().startsWith("📄") ||
+      line.trim().startsWith("[Excluded]")
+  );
+  return fileTreeLines.length > 0 ? fileTreeLines.join("\n") : null;
 }
 
 export function stripAnsiCodes(str: string): string {

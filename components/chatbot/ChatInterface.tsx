@@ -8,19 +8,19 @@ import ChatInput from "@/components/chatbot/ChatInput";
 import ScrollToBottomButton from "@/components/chatbot/ScrollToBottomButton";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useGithubCContextStore } from "@/lib/store";
+import { Button } from "@/components/ui/button";
 
 interface Message {
   role: "system" | "user" | "assistant";
   content: string;
 }
 
-const ChatInterface: React.FC = () => {
+export const useChatInterface = () => {
   const { isLoaded, isSignedIn, user } = useUser();
   const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  // const [selectedModel, setselectedModel] = useState<string | null>(null);
 
   const {
     markdownContent,
@@ -28,16 +28,13 @@ const ChatInterface: React.FC = () => {
     setTokensLeft,
     selectedModel,
     setSelectedModel,
+    messages,
+    setMessages,
+    clearMessages,
   } = useGithubCContextStore();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (markdownContent) {
-      setMessages([{ role: "system", content: markdownContent }]);
-    }
-  }, [markdownContent]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -73,17 +70,22 @@ const ChatInterface: React.FC = () => {
       setTokensLeft(selectedModel, data.remainingTokens);
     } catch (error) {
       console.error("Error updating tokens left:", error);
-      // Don't update tokensLeft on error to keep the previous value
     }
   }, [selectedModel, setTokensLeft]);
 
-  const handleSendMessage = async (userInput: string, modelId: string) => {
-    if (!userInput.trim()) return;
-
+  const handleSendMessage = async (
+    userInput: string | null,
+    modelId: string
+  ) => {
     setIsLoading(true);
     setSelectedModel(modelId);
-    const userMessage: Message = { role: "user", content: userInput };
-    const newMessages = [...messages, userMessage];
+
+    let newMessages: Message[] = [...messages];
+
+    if (userInput !== null) {
+      const userMessage: Message = { role: "user", content: userInput };
+      newMessages.push(userMessage);
+    }
     setMessages(newMessages);
     scrollToBottom();
 
@@ -115,7 +117,6 @@ const ChatInterface: React.FC = () => {
         scrollToBottom();
       }
 
-      // Update tokens left after the stream is complete
       await updateTokensLeft();
     } catch (error) {
       console.error("Error sending message:", error);
@@ -130,6 +131,42 @@ const ChatInterface: React.FC = () => {
     }
   };
 
+  const handleTokensUpdated = (modelId: string, amount: number) => {
+    setTokensLeft(modelId, amount);
+  };
+
+  const handleClearChat = useCallback(() => {
+    clearMessages();
+  }, [clearMessages]);
+
+  return {
+    isLoading,
+    showScrollButton,
+    messages,
+    messagesEndRef,
+    chatContainerRef,
+    scrollToBottom,
+    handleSendMessage,
+    tokensLeft,
+    handleTokensUpdated,
+    handleClearChat,
+  };
+};
+
+const ChatInterface: React.FC = () => {
+  const {
+    isLoading,
+    showScrollButton,
+    messages,
+    messagesEndRef,
+    chatContainerRef,
+    scrollToBottom,
+    handleSendMessage,
+    tokensLeft,
+    handleTokensUpdated,
+    handleClearChat,
+  } = useChatInterface();
+
   return (
     <div
       className="relative flex flex-col h-full overflow-hidden"
@@ -141,6 +178,14 @@ const ChatInterface: React.FC = () => {
       </div>
 
       <div className="relative bg-gray-100 dark:bg-gray-800">
+        <div className="absolute -top-8 left-0 z-50 pl-2">
+          <button
+            onClick={handleClearChat}
+            className=" px-2 py-1 dark:hover:text-gray-300 dark:bg-gray-900 bg-gray-100 bg-opacity-80 text-xs font-semibold rounded-lg border border-gray-300 shadow-md hover:bg-white hover:text-black"
+          >
+            Clear Chat
+          </button>
+        </div>
         <div className="absolute top-0 right-0 z-50">
           <ScrollToBottomButton onClick={scrollToBottom} />
         </div>
@@ -150,7 +195,7 @@ const ChatInterface: React.FC = () => {
           isStreaming={isLoading}
           previousMessages={messages.map((msg) => msg.content)}
           tokensLeft={tokensLeft}
-          onTokensUpdated={setTokensLeft}
+          onTokensUpdated={handleTokensUpdated}
         />
       </div>
     </div>

@@ -2,7 +2,7 @@
 import { create } from "zustand";
 import { Model } from "@prisma/client";
 
-interface Message {
+export interface Message {
   role: "system" | "user" | "assistant";
   content: string;
 }
@@ -44,6 +44,7 @@ interface GithubCContextState {
   setModels: (models: Model[]) => void;
   addMessage: (message: Message) => void;
   updateLastMessage: (content: string) => void;
+  setMessages: (messages: Message[]) => void;
   clearMessages: () => void;
 
   // Token related actions
@@ -95,6 +96,7 @@ export const useGithubCContextStore = create<GithubCContextState>((set) => ({
       }
       return { messages: updatedMessages };
     }),
+  setMessages: (messages) => set({ messages }),
   clearMessages: () => set({ messages: [] }),
 
   // Token related actions
