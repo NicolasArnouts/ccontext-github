@@ -8,6 +8,7 @@ import ChatInput from "@/components/chatbot/ChatInput";
 import ScrollToBottomButton from "@/components/chatbot/ScrollToBottomButton";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useGithubCContextStore } from "@/lib/store";
+import { Button } from "@/components/ui/button";
 
 interface Message {
   role: "system" | "user" | "assistant";
@@ -29,6 +30,7 @@ export const useChatInterface = () => {
     setSelectedModel,
     messages,
     setMessages,
+    clearMessages,
   } = useGithubCContextStore();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -68,7 +70,6 @@ export const useChatInterface = () => {
       setTokensLeft(selectedModel, data.remainingTokens);
     } catch (error) {
       console.error("Error updating tokens left:", error);
-      // Don't update tokensLeft on error to keep the previous value
     }
   }, [selectedModel, setTokensLeft]);
 
@@ -116,7 +117,6 @@ export const useChatInterface = () => {
         scrollToBottom();
       }
 
-      // Update tokens left after the stream is complete
       await updateTokensLeft();
     } catch (error) {
       console.error("Error sending message:", error);
@@ -135,6 +135,10 @@ export const useChatInterface = () => {
     setTokensLeft(modelId, amount);
   };
 
+  const handleClearChat = useCallback(() => {
+    clearMessages();
+  }, [clearMessages]);
+
   return {
     isLoading,
     showScrollButton,
@@ -145,6 +149,7 @@ export const useChatInterface = () => {
     handleSendMessage,
     tokensLeft,
     handleTokensUpdated,
+    handleClearChat,
   };
 };
 
@@ -159,6 +164,7 @@ const ChatInterface: React.FC = () => {
     handleSendMessage,
     tokensLeft,
     handleTokensUpdated,
+    handleClearChat,
   } = useChatInterface();
 
   return (
@@ -172,6 +178,14 @@ const ChatInterface: React.FC = () => {
       </div>
 
       <div className="relative bg-gray-100 dark:bg-gray-800">
+        <div className="absolute -top-8 left-0 z-50 pl-2">
+          <button
+            onClick={handleClearChat}
+            className="px-2 py-1 text-xs font-semibold rounded-lg border border-gray-300 shadow-md hover:bg-white hover:text-black"
+          >
+            Clear Chat
+          </button>
+        </div>
         <div className="absolute top-0 right-0 z-50">
           <ScrollToBottomButton onClick={scrollToBottom} />
         </div>

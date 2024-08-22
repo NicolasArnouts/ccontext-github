@@ -13,7 +13,7 @@ const ScrollToBottomButton: React.FC<ScrollToBottomButtonProps> = ({
 }) => {
   return (
     <Button
-      className="absolute bottom-0 right-3 rounded-full px-2 border border-gray-300 shadow-md"
+      className="absolute bottom-1 right-3 rounded-full px-2 border border-gray-300 shadow-md"
       onClick={onClick}
       variant="secondary"
     >
