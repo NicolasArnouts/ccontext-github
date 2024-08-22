@@ -1,7 +1,8 @@
 // app/api/run-ccontext/route.ts
+
 import { NextRequest } from "next/server";
 import { TempEnvManager } from "@/lib/temp-env-manager";
-import { getUserInfo } from "@/lib/helpers";
+import { getUserInfo, sanitizeInput } from "@/lib/helpers";
 import { spawn } from "child_process";
 import { Readable } from "stream";
 
@@ -11,8 +12,6 @@ export async function GET(req: NextRequest) {
   const userInfo = await getUserInfo(req);
   const envId = req.nextUrl.searchParams.get("envId");
   const maxTokens = req.nextUrl.searchParams.get("maxTokens");
-  const generateMarkdown =
-    req.nextUrl.searchParams.get("generateMarkdown") === "true";
   const includes = req.nextUrl.searchParams.get("includes");
   const excludes = req.nextUrl.searchParams.get("excludes");
 
@@ -20,8 +19,6 @@ export async function GET(req: NextRequest) {
     return new Response("Missing envId", { status: 400 });
   }
 
-  // Validate maxTokens
-  // const parsedMaxTokens = maxTokens ? parseInt(maxTokens, 10) : 10000;
   const parsedMaxTokens = 10000;
   if (isNaN(parsedMaxTokens) || parsedMaxTokens <= 0) {
     return new Response("Invalid maxTokens value", { status: 400 });
@@ -35,7 +32,15 @@ export async function GET(req: NextRequest) {
 
   const repoPath = tempEnvManager.getRepoPath(userInfo.id, repository.slug);
 
-  const cmdString = `ccontext -m 10000000 -e "${excludes}" -i ${includes} -gm -g`;
+  const sanitizedIncludes = sanitizeInput(includes || "");
+  const sanitizedExcludes = sanitizeInput(excludes || "");
+
+  console.log("sanitizedIncludes", sanitizedIncludes);
+  console.log("sanitizedExcludes", sanitizedExcludes);
+
+  const cmdString = `ccontext -m 10000000 ${
+    sanitizedExcludes ? `-e "${sanitizedExcludes}"` : ""
+  } ${sanitizedIncludes ? `-i "${sanitizedIncludes}"` : ""} -gm -g`;
 
   const stream = new ReadableStream({
     start(controller) {

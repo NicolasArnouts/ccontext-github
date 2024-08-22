@@ -72,7 +72,8 @@ export async function getOrCreateUserTokens(
 }
 
 export function sanitizeInput(input: string): string {
-  return input.replace(/[;&|`$()]/g, "");
+  // Remove potentially dangerous characters while preserving wcmatch patterns
+  return input.replace(/[;&`$()]/g, "").replace(/\\/g, "\\\\");
 }
 
 export function validateGitHubUrl(url: string): boolean {

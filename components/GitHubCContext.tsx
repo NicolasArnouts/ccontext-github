@@ -82,14 +82,15 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
 
       let cmdOutput = "";
 
-      const ccontextCommand = `-m ${maxTokens} ${
-        includes ? `-i ${includes}` : ""
-      } ${excludes ? `-e ${excludes}` : ""} -gm`;
+      const params = {
+        envId,
+        includes,
+        excludes,
+        maxTokens,
+      };
 
       const eventSource = new EventSource(
-        `/api/run-ccontext?envId=${envId}&command=${encodeURIComponent(
-          ccontextCommand
-        )}`
+        `/api/run-ccontext?${new URLSearchParams(params).toString()}`
       );
 
       eventSource.onmessage = (event) => {
@@ -228,17 +229,17 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
       {isCloned && (
         <>
           <Input
-            placeholder="Includes (separated by |)"
-            id="includes"
-            value={includes}
-            onChange={(e) => setIncludes(e.target.value)}
-            className="bg-background text-foreground"
-          />
-          <Input
-            placeholder="Excludes (separated by |)"
+            placeholder="Excludes (separated by |) e.g. *.md|*.txt|**/node_modules/*"
             id="excludes"
             value={excludes}
             onChange={(e) => setExcludes(e.target.value)}
+            className="bg-background text-foreground"
+          />
+          <Input
+            placeholder="Includes (separated by |) e.g. *.md|*.txt|**/node_modules/*"
+            id="includes"
+            value={includes}
+            onChange={(e) => setIncludes(e.target.value)}
             className="bg-background text-foreground"
           />
           <Button
@@ -282,11 +283,11 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
 
       {fileTree && <ParsedFileTree fileTree={fileTree} />}
 
-      <CommandOutput
+      {/* <CommandOutput
         calculatedTokens={calculatedTokens}
         output={output}
         handleCopyToClipboard={handleCopyToClipboard}
-      />
+      /> */}
     </div>
   );
 };
