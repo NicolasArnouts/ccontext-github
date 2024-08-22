@@ -6,6 +6,7 @@ import { useGithubCContextStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { BotMessageSquare, SlidersHorizontal } from "lucide-react";
 import { useScreenSize } from "@/hooks/useScreenSize";
+import CContextExplanation from "@/components/CContextExplanation";
 
 // Dynamically import components that might use browser APIs
 const GitHubCContext = dynamic(() => import("@/components/GitHubCContext"), {
@@ -85,11 +86,14 @@ export default function Home() {
         {isMobile ? (
           <div className="relative h-full overflow-hidden rounded-3xl ">
             {currentMobileView === "menu" ? (
-              <div className="h-full overflow-scroll bg-gray-50 dark:bg-gray-700 p-4">
-                <GitHubCContext
-                  onMarkdownGenerated={handleMarkdownGenerated}
-                  onChatWithAI={handleChatWithAI}
-                />
+              <div className="flex flex-col gap-6 rounded-3xl">
+                <div className="h-full overflow-scroll bg-gray-50 dark:bg-gray-700 p-4 rounded-3xl">
+                  <GitHubCContext
+                    onMarkdownGenerated={handleMarkdownGenerated}
+                    onChatWithAI={handleChatWithAI}
+                  />
+                </div>
+                <CContextExplanation />
               </div>
             ) : (
               <div className="h-[85svh] bg-gray-50 dark:bg-gray-600 rounded-3xl overflow-scroll">
@@ -100,49 +104,53 @@ export default function Home() {
             {currentMobileView !== "menu" && (
               <button
                 onClick={toggleMobileView}
-                className="absolute top-2 right-2 p-2 bg-gray-900 bg-opacity-80 rounded-full z-50"
+                className="hover:bg-white hover:text-black absolute top-1 left-1 px-2 py-1 font-semibold z-50 dark:hover:text-gray-300 dark:bg-gray-900 bg-gray-100  shadow-md  border bg-opacity-80 rounded-xl"
               >
                 <SlidersHorizontal className="h-5 w-5" />
               </button>
             )}
           </div>
         ) : (
-          <ResizablePanelGroup
-            direction="horizontal"
-            className="rounded-2xl p-0 gap-0 m-0"
-          >
-            {showMenu && (
-              <ResizablePanel className="overflow-scroll">
-                <div
-                  className={cn(
-                    "relative h-[85vh] overflow-scroll bg-gray-50 dark:bg-gray-700 p-4",
-                    showChat ? "h-[85vh]" : "h-full"
-                  )}
-                >
-                  <GitHubCContext
-                    onMarkdownGenerated={handleMarkdownGenerated}
-                    onChatWithAI={handleChatWithAI}
-                  />
-                </div>
-              </ResizablePanel>
-            )}
-            {showChat && showMenu && (
-              <ResizableHandle className="p-1 bg-gray-200 dark:bg-gray-600" />
-            )}
-            {showChat && (
-              <ResizablePanel className={cn("h-[85vh] p-0 m-0")}>
-                <div className="relative bg-gray-50  dark:bg-gray-600 md:rounded-none rounded-3xl h-[85vh] overflow-scroll">
-                  <button
-                    onClick={handleShowMenu}
-                    className="hover:bg-white hover:text-black absolute top-1 left-1 px-2 py-1 font-semibold z-50 dark:hover:text-gray-300 dark:bg-gray-900 bg-gray-100  shadow-md  border bg-opacity-80 rounded-xl"
+          <div className="flex flex-col gap-6">
+            <ResizablePanelGroup
+              direction="horizontal"
+              className="rounded-2xl p-0 gap-0 m-0"
+            >
+              {showMenu && (
+                <ResizablePanel className="overflow-scroll">
+                  <div
+                    className={cn(
+                      "relative h-[85vh] overflow-scroll bg-gray-50 dark:bg-gray-700 p-4",
+                      showChat ? "h-[85vh]" : "h-full"
+                    )}
                   >
-                    <SlidersHorizontal className="h-5 w-5" />
-                  </button>
-                  <ChatInterface />
-                </div>
-              </ResizablePanel>
-            )}
-          </ResizablePanelGroup>
+                    <GitHubCContext
+                      onMarkdownGenerated={handleMarkdownGenerated}
+                      onChatWithAI={handleChatWithAI}
+                    />
+                  </div>
+                </ResizablePanel>
+              )}
+              {showChat && showMenu && (
+                <ResizableHandle className="p-1 bg-gray-200 dark:bg-gray-600" />
+              )}
+              {showChat && (
+                <ResizablePanel className={cn("h-[85vh] p-0 m-0")}>
+                  <div className="relative bg-gray-50  dark:bg-gray-600 md:rounded-none rounded-3xl h-[85vh] overflow-scroll">
+                    <button
+                      onClick={handleShowMenu}
+                      className="hover:bg-white hover:text-black absolute top-1 left-1 px-2 py-1 font-semibold z-50 dark:hover:text-gray-300 dark:bg-gray-900 bg-gray-100  shadow-md  border bg-opacity-80 rounded-xl"
+                    >
+                      <SlidersHorizontal className="h-5 w-5" />
+                    </button>
+                    <ChatInterface />
+                  </div>
+                </ResizablePanel>
+              )}
+            </ResizablePanelGroup>
+
+            <CContextExplanation />
+          </div>
         )}
       </div>
     </main>
