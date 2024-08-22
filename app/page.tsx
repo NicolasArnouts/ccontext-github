@@ -33,7 +33,10 @@ export default function Home() {
       )}
     >
       <div
-        className={cn("md:space-y-6 w-full", !showChat && "sm:w-4/5 md:w-1/2")}
+        className={cn(
+          "space-y-6 w-full",
+          !showChat && "sm:w-4/5 md:w-2/3 lg:w-1/2"
+        )}
       >
         <div className="">
           <ResizablePanelGroup
