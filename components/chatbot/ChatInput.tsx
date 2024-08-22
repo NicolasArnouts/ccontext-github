@@ -1,4 +1,4 @@
-// components/chatbot/ChatInput.tsx
+"use client";
 
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { ArrowUp } from "lucide-react";
@@ -241,14 +241,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
             />
             <button
               type="submit"
-              className="bottom-2 bg-blue-500 p-2 text-white font-bold rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="mr-1 bottom-2 shadow-lg bg-blue-500 p-2 text-white font-bold rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
               disabled={isStreaming || !selectedModel || isCheckingTokens}
             >
               <ArrowUp className="h-5 w-5" />
             </button>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 justify-between items-center mt-2">
+          <div className="flex flex-row flex-wrap gap-4 sm:gap-2 justify-center sm:justify-between items-center mt-2">
             {isLoadingModels ? (
               <div className="text-sm text-gray-600 dark:text-gray-300">
                 Loading models...

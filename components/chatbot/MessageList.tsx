@@ -26,9 +26,9 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
 
   return (
     <div className="flex-1 p-4 space-y-4 overflow-auto relative">
-      <SystemMessage
+      {/* <SystemMessage
         content={`I am your Github CContext assistant! Ask me anything you want! <br><br>Pro tip: Enter a valid github url, and press **Start Chat**`}
-      />
+      /> */}
 
       {messages.map((message, index) => (
         <div key={index}>

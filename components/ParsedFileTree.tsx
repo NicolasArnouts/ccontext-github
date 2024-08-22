@@ -1,10 +1,14 @@
 import React from "react";
+import { Clipboard } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ParsedFileTreeProps {
   fileTree: string;
 }
 
 const ParsedFileTree: React.FC<ParsedFileTreeProps> = ({ fileTree }) => {
+  const { toast } = useToast();
+
   const renderFileTree = (tree: string) => {
     return tree.split("\n").map((line, index) => {
       const indent = line.search(/\S/);
@@ -26,12 +30,34 @@ const ParsedFileTree: React.FC<ParsedFileTreeProps> = ({ fileTree }) => {
     });
   };
 
+  const handleCopyToClipboard = () => {
+    navigator.clipboard.writeText(fileTree).then(
+      () => {
+        toast({
+          title: "Copied!",
+          description: "File tree copied to clipboard",
+        });
+      },
+      (err) => {
+        console.error("Failed to copy: ", err);
+        toast({
+          title: "Error",
+          description: "Failed to copy file tree",
+          variant: "destructive",
+        });
+      }
+    );
+  };
+
   return (
-    <div className="flex flex-col bg-background border border-border rounded-lg">
-      {/* <h3 className="  w-full items-center text-center text-xl font-semibold text-foreground">
-        File Tree:
-      </h3> */}
-      <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto max-h-96 p-2">
+    <div className="relative flex flex-col bg-background border border-border rounded-lg">
+      <button
+        className="absolute p-2 bg-gray-200 opacity-80 hover:dark:text-gray-300 hover:dark:border-gray-300 dark:bg-gray-800 border dark:border-white z-50 rounded-xl right-1 top-1"
+        onClick={handleCopyToClipboard}
+      >
+        <Clipboard className="h-5 w-5" />
+      </button>
+      <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto p-2">
         {renderFileTree(fileTree)}
       </pre>
     </div>

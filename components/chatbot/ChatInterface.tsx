@@ -181,7 +181,7 @@ const ChatInterface: React.FC = () => {
         <div className="absolute -top-8 left-0 z-50 pl-2">
           <button
             onClick={handleClearChat}
-            className="px-2 py-1 bg-gray-900 bg-opacity-80 text-xs font-semibold rounded-lg border border-gray-300 shadow-md hover:bg-white hover:text-black"
+            className=" px-2 py-1 dark:hover:text-gray-300 dark:bg-gray-900 bg-gray-100 bg-opacity-80 text-xs font-semibold rounded-lg border border-gray-300 shadow-md hover:bg-white hover:text-black"
           >
             Clear Chat
           </button>

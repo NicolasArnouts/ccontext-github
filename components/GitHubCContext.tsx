@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -199,7 +201,8 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
   const handleChatWithAI = () => {
     if (markdownContent) {
       onMarkdownGenerated(markdownContent);
-      setMessages([...messages, { role: "user", content: markdownContent }]);
+      // setMessages([...messages, { role: "user", content: markdownContent }]);
+      setMessages([{ role: "user", content: markdownContent }]);
       onChatWithAI();
     } else {
       toast({
