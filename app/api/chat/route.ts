@@ -11,7 +11,8 @@ import OpenAI from "openai";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions.mjs";
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: "sk--FFTNxPVvULemZ1X5dPvug",
+  baseURL: "http://localhost:4000/",
 });
 
 function getMessageContent(message: ChatCompletionMessageParam): string {
