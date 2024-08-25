@@ -6,8 +6,6 @@ import Stripe from "stripe";
 
 const webhookSecret: string = process.env.STRIPE_WEBHOOK_SECRET!;
 
-export const runtime = "edge";
-
 export async function POST(req: Request) {
   const buf = await req.text();
   const sig = headers().get("stripe-signature")!;
