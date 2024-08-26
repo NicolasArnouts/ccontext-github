@@ -87,7 +87,7 @@ export default function Home() {
           <div className="relative h-full overflow-hidden rounded-3xl ">
             {currentMobileView === "menu" ? (
               <div className="flex flex-col gap-6 rounded-3xl">
-                <div className="h-full overflow-scroll bg-gray-50 dark:bg-gray-700 p-4 rounded-3xl">
+                <div className="relative h-full  bg-gray-50 dark:bg-gray-700 p-4 rounded-3xl">
                   <GitHubCContext
                     onMarkdownGenerated={handleMarkdownGenerated}
                     onChatWithAI={handleChatWithAI}
@@ -120,7 +120,7 @@ export default function Home() {
                 <ResizablePanel className="overflow-scroll">
                   <div
                     className={cn(
-                      "relative h-[85vh] overflow-scroll bg-gray-50 dark:bg-gray-700 p-4",
+                      "relative h-[85vh] bg-gray-50 dark:bg-gray-700 p-4",
                       showChat ? "h-[85vh]" : "h-full"
                     )}
                   >
@@ -149,7 +149,7 @@ export default function Home() {
               )}
             </ResizablePanelGroup>
 
-            <CContextExplanation />
+            {!showChat && <CContextExplanation />}
           </div>
         )}
       </div>

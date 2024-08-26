@@ -52,10 +52,10 @@ const ParsedFileTree: React.FC<ParsedFileTreeProps> = ({ fileTree }) => {
   return (
     <div className="relative flex flex-col bg-background border border-border rounded-lg">
       <button
-        className="absolute p-2 bg-gray-200 opacity-80 hover:dark:text-gray-300 hover:dark:border-gray-300 dark:bg-gray-800 border dark:border-white z-50 rounded-xl right-1 top-1"
+        className="hover:opacity-60 absolute p-2 bg-gray-200 opacity-80 hover:dark:text-gray-300 hover:dark:border-gray-300 dark:bg-gray-800 border dark:border-white z-50 rounded-xl right-1 top-1"
         onClick={handleCopyToClipboard}
       >
-        <Clipboard className="h-5 w-5" />
+        <Clipboard className="h-5 w-5 " />
       </button>
       <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto p-2">
         {renderFileTree(fileTree)}

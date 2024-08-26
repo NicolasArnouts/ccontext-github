@@ -1,6 +1,5 @@
-// hooks/useScreenSize.ts
-
 import { useState, useEffect } from "react";
+import { debounce } from "@/lib/helpers-client";
 
 export function useScreenSize() {
   const [screenSize, setScreenSize] = useState({
@@ -16,14 +15,16 @@ export function useScreenSize() {
       });
     };
 
+    const debouncedHandleResize = debounce(handleResize, 200);
+
     if (typeof window !== "undefined") {
-      window.addEventListener("resize", handleResize);
-      handleResize();
+      window.addEventListener("resize", debouncedHandleResize);
+      handleResize(); // Call once to set initial size
     }
 
     return () => {
       if (typeof window !== "undefined") {
-        window.removeEventListener("resize", handleResize);
+        window.removeEventListener("resize", debouncedHandleResize);
       }
     };
   }, []);
