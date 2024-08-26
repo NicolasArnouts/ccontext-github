@@ -82,7 +82,7 @@ export default function Home() {
         !showChat && ""
       )}
     >
-      <div className={cn(" w-full", !showChat && "sm:w-4/5 md:w-2/3 lg:w-1/2")}>
+      <div className={cn(" w-full", !showChat && "sm:w-4/5 md:w-3/4 lg:w-5/6")}>
         {isMobile ? (
           <div className="relative h-full overflow-hidden rounded-3xl ">
             {currentMobileView === "menu" ? (
