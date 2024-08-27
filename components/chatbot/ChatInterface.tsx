@@ -169,7 +169,7 @@ const ChatInterface: React.FC = () => {
 
   return (
     <div
-      className="relative flex flex-col h-full overflow-hidden"
+      className="relative flex flex-col h-full overflow-auto"
       ref={chatContainerRef}
     >
       <div className="relative flex-grow overflow-y-auto bg-white dark:bg-gray-900">

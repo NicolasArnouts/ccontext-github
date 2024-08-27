@@ -95,8 +95,13 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
         params.envId = envId;
       }
 
+      // Filter out undefined values
+      const filteredParams = Object.fromEntries(
+        Object.entries(params).filter(([_, v]) => v !== undefined)
+      );
+
       const eventSource = new EventSource(
-        `/api/run-ccontext?${new URLSearchParams(params).toString()}`
+        `/api/run-ccontext?${new URLSearchParams(filteredParams).toString()}`
       );
 
       eventSource.onmessage = (event) => {
