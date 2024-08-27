@@ -84,12 +84,16 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
 
       let cmdOutput = "";
 
-      const params = {
-        envId,
+      const params: Record<string, string> = {
         includes,
         excludes,
         maxTokens,
       };
+
+      // Only add envId to params if it's defined
+      if (envId) {
+        params.envId = envId;
+      }
 
       const eventSource = new EventSource(
         `/api/run-ccontext?${new URLSearchParams(params).toString()}`

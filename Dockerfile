@@ -8,7 +8,8 @@ RUN apk add --no-cache \
     git \
     libc6-compat \
     make \
-    g++
+    g++ \
+    nano
 
 # Create app directory
 WORKDIR /app

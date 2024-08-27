@@ -3,6 +3,7 @@ import prisma from "@/lib/prismadb";
 
 export async function resetTokens() {
   const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+  const DEFAULT_NEW_USER_TOKENS = 100_000;
 
   try {
     const freeModels = await prisma.model.findMany({
@@ -31,7 +32,7 @@ export async function resetTokens() {
         ],
       },
       data: {
-        tokensLeft: 1000,
+        tokensLeft: 100000,
         resetTimestamp: new Date(),
       },
     });

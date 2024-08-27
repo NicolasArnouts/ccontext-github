@@ -117,10 +117,10 @@ export default function Home() {
               className="rounded-2xl p-0 gap-0 m-0"
             >
               {showMenu && (
-                <ResizablePanel className="overflow-scroll">
+                <ResizablePanel className="">
                   <div
                     className={cn(
-                      "relative h-[85vh] bg-gray-50 dark:bg-gray-700 p-4",
+                      "relative h-[85vh] bg-gray-50 dark:bg-gray-700 p-4 overflow-auto",
                       showChat ? "h-[85vh]" : "h-full"
                     )}
                   >

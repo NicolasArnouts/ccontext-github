@@ -168,4 +168,9 @@ export class TempEnvManager {
       }
     }
   }
+
+  // New method to be called from the API route
+  async cleanupExpiredEnvironments(): Promise<void> {
+    await this.cleanupExpiredRepositories();
+  }
 }

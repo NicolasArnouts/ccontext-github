@@ -15,7 +15,7 @@ interface GithubCContextState {
   markdownContent: string | null;
   pdfExists: boolean;
   isLoading: boolean;
-  envId?: string;
+  envId: string | undefined; // Changed from string | null
   fileTree: string | null;
   calculatedTokens: number | null;
 
@@ -35,7 +35,7 @@ interface GithubCContextState {
   setMarkdownContent: (content: string | null) => void;
   setPdfExists: (exists: boolean) => void;
   setIsLoading: (isLoading: boolean) => void;
-  setEnvId: (id: string | null) => void;
+  setEnvId: (id: string | undefined) => void; // Changed from (id: string | null) => void
   setFileTree: (fileTree: string | null) => void;
   setCalculatedTokens: (tokens: number | null) => void;
 
@@ -61,7 +61,7 @@ export const useGithubCContextStore = create<GithubCContextState>((set) => ({
   markdownContent: null,
   pdfExists: false,
   isLoading: false,
-  envId: null,
+  envId: undefined, // Changed from null to undefined
   fileTree: null,
   calculatedTokens: null,
   selectedModel: "",
