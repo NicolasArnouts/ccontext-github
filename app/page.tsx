@@ -6,7 +6,7 @@ import { useGithubCContextStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { BotMessageSquare, SlidersHorizontal } from "lucide-react";
 import { useScreenSize } from "@/hooks/useScreenSize";
-import EnhancedCContextExplanation from "@/components/EnhancedCcontextExplanation";
+import EnhancedCContextExplanation from "@/components/EnhancedCContextExplanation";
 
 // Dynamically import components that might use browser APIs
 const GitHubCContext = dynamic(() => import("@/components/GitHubCContext"), {
