@@ -6,7 +6,7 @@ import { useGithubCContextStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { BotMessageSquare, SlidersHorizontal } from "lucide-react";
 import { useScreenSize } from "@/hooks/useScreenSize";
-import CContextExplanation from "@/components/CContextExplanation";
+import EnhancedCContextExplanation from "@/components/EnhancedCcontextExplanation";
 
 // Dynamically import components that might use browser APIs
 const GitHubCContext = dynamic(() => import("@/components/GitHubCContext"), {
@@ -93,7 +93,7 @@ export default function Home() {
                     onChatWithAI={handleChatWithAI}
                   />
                 </div>
-                <CContextExplanation />
+                <EnhancedCContextExplanation />
               </div>
             ) : (
               <div className="h-[85svh] bg-gray-50 dark:bg-gray-600 rounded-3xl overflow-scroll">
@@ -149,7 +149,7 @@ export default function Home() {
               )}
             </ResizablePanelGroup>
 
-            {!showChat && <CContextExplanation />}
+            {!showChat && <EnhancedCContextExplanation />}
           </div>
         )}
       </div>
