@@ -5,9 +5,13 @@ import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import ParsedFileTree from "@/components/ParsedFileTree";
 import { useGithubCContextStore } from "@/lib/store";
-import { parseCommandOutput } from "@/lib/helpers-client";
+import {
+  parseCommandOutput,
+  TOKEN_WARNING_THRESHOLD,
+} from "@/lib/helpers-client";
 import { useChatInterface } from "@/components/chatbot/ChatInterface";
 import { Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface GitHubCContextProps {
   onMarkdownGenerated: (content: string) => void;
@@ -277,12 +281,26 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
       )}
 
       {calculatedTokens && (
-        <div className="flex flex-wrap justify-center text-center items-center gap-2">
-          <span className="text-sm">Repo Tokens:</span>
-          <span className="font-bold">{calculatedTokens.toLocaleString()}</span>
+        <div className="flex flex-col flex-wrap justify-center text-center items-center gap-2">
+          <div className="flex flex-wrap justify-center text-center items-center gap-2">
+            <span className="text-sm">Repo Tokens:</span>
+            <span
+              className={cn(
+                "font-bold",
+                calculatedTokens > TOKEN_WARNING_THRESHOLD && "text-red-600"
+              )}
+            >
+              {calculatedTokens.toLocaleString()}
+            </span>
+          </div>
+
+          {calculatedTokens > TOKEN_WARNING_THRESHOLD && (
+            <span className="text-red-600 text-sm font-semibold">
+              Lots of tokens, try excluding some files
+            </span>
+          )}
         </div>
       )}
-
       {(markdownContent || pdfExists) && (
         <div>
           <div className="space-y-4">

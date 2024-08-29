@@ -11,11 +11,13 @@ import {
   getInputTokens,
   debounce,
   concatenateMessages,
+  TOKEN_WARNING_THRESHOLD,
 } from "@/lib/helpers-client";
 import OutOfTokensDialog from "@/components/OutOfTokensDialog";
 import PremiumModelDialog from "@/components/PremiumModelDialog";
 import Link from "next/link";
 import { useClerk, useUser } from "@clerk/nextjs";
+import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
   onSubmit: (message: string | null, modelId: string) => void;
@@ -279,9 +281,17 @@ const ChatInput: React.FC<ChatInputProps> = ({
               <div className="text-sm text-gray-600 dark:text-gray-300">
                 <div className="">
                   Chat cost:{" "}
-                  {typeof tokenCost === "number"
-                    ? tokenCost.toLocaleString()
-                    : "N/A"}
+                  <span
+                    className={cn(
+                      typeof tokenCost === "number" &&
+                        tokenCost > TOKEN_WARNING_THRESHOLD &&
+                        "text-red-600"
+                    )}
+                  >
+                    {typeof tokenCost === "number"
+                      ? tokenCost.toLocaleString()
+                      : "N/A"}
+                  </span>
                 </div>
                 <div className="">
                   Tokens left:{" "}

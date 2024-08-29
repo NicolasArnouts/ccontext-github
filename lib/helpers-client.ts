@@ -116,3 +116,5 @@ export function getInputTokens(
     }
   }
 }
+
+export const TOKEN_WARNING_THRESHOLD = 100_000;
