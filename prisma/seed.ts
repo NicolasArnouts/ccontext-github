@@ -10,6 +10,7 @@ async function main() {
     const models = [
       {
         name: "gpt-4o-mini",
+        provider: "openai",
         tags: ["Free"],
         pricePerMillionTokens: 0.6,
         initialTokens: 200000,
@@ -17,13 +18,15 @@ async function main() {
       },
       {
         name: "gpt-4o",
+        provider: "openai",
         tags: ["Premium"],
         pricePerMillionTokens: 7,
         initialTokens: 50000,
         resetTokens: 25000,
       },
       {
-        name: "claude-3.5-sonnet",
+        name: "claude-3-5-sonnet-20240620",
+        provider: "anthropic",
         tags: ["Premium"],
         pricePerMillionTokens: 5,
         initialTokens: 50000,
@@ -35,12 +38,14 @@ async function main() {
       await prisma.model.upsert({
         where: { name: model.name },
         update: {
+          provider: model.provider,
           pricePerMillionTokens: model.pricePerMillionTokens,
           initialTokens: model.initialTokens,
           resetTokens: model.resetTokens,
         },
         create: {
           name: model.name,
+          provider: model.provider,
           tags: model.tags,
           pricePerMillionTokens: model.pricePerMillionTokens,
           initialTokens: model.initialTokens,

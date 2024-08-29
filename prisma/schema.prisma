@@ -69,10 +69,11 @@ model ChatMessage {
 model Model {
   id                    String       @id @default(uuid())
   name                  String       @unique
+  provider              String
   tags                  String[]
   pricePerMillionTokens Float
-  initialTokens         Int // New field
-  resetTokens           Int // New field
+  initialTokens         Int
+  resetTokens           Int
   userTokens            UserTokens[]
   purchases             Purchase[]
 }

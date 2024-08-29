@@ -1,3 +1,5 @@
+// app/api/chat/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prismadb";
 import {
@@ -7,13 +9,39 @@ import {
   stripAnsiCodes,
   UserInfo,
 } from "@/lib/helpers";
-import OpenAI from "openai";
+import { TokenJS } from "token.js";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions.mjs";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_API_BASE_URL,
-});
+const tokenjs = new TokenJS();
+
+// Define the valid provider types
+type ValidProvider =
+  | "openai"
+  | "ai21"
+  | "anthropic"
+  | "gemini"
+  | "cohere"
+  | "bedrock"
+  | "mistral"
+  | "groq"
+  | "perplexity"
+  | "openrouter";
+
+// Type guard function to check if a string is a valid provider
+function isValidProvider(provider: string): provider is ValidProvider {
+  return [
+    "openai",
+    "ai21",
+    "anthropic",
+    "gemini",
+    "cohere",
+    "bedrock",
+    "mistral",
+    "groq",
+    "perplexity",
+    "openrouter",
+  ].includes(provider);
+}
 
 function getMessageContent(message: ChatCompletionMessageParam): string {
   if (typeof message.content === "string") {
@@ -83,6 +111,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check if the provider is valid
+    if (!isValidProvider(model.provider)) {
+      return NextResponse.json(
+        { error: "Invalid provider for the selected model" },
+        { status: 400 }
+      );
+    }
+
     let userTokens = await getOrCreateUserTokens(userInfo, modelId);
 
     if (model.tags.includes("Premium") && userInfo.isAnonymous) {
@@ -131,7 +167,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const stream = await openai.chat.completions.create({
+    const stream = await tokenjs.chat.completions.create({
+      provider: model.provider,
       model: model.name,
       messages: messages,
       stream: true,
