@@ -212,8 +212,7 @@ export function getInputTokens(
 }
 
 export function getClientIpAddress(req: NextRequest): string {
-  const ip =
-    req.ip ?? req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
+  const ip = req.ip ?? req.headers.get("x-real-ip")?.split(",")[0] ?? "unknown";
 
   if (ip === "unknown") {
     console.warn("Unable to determine client IP address");
