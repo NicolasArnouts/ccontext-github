@@ -48,11 +48,6 @@ const Header = () => {
                 </>
               ) : (
                 <>
-                  <span className="text-sm">
-                    {userInfo
-                      ? `Anonymous ID: ${userInfo.userId}`
-                      : "Loading..."}
-                  </span>
                   <SignInButton mode="modal">
                     <button className="text-sm font-medium">Sign In</button>
                   </SignInButton>
