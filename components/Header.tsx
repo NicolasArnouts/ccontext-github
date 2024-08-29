@@ -43,7 +43,6 @@ const Header = () => {
             {isLoaded ? (
               isSignedIn ? (
                 <>
-                  <span className="text-sm">User ID: {userInfo?.userId}</span>
                   <UserButton afterSignOutUrl="/" />
                 </>
               ) : (
