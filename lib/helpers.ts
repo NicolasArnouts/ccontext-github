@@ -38,6 +38,8 @@ export async function getOrCreateUserTokens(
   userInfo: UserInfo,
   modelId: string
 ) {
+  const DEFAULT_NEW_USER_TOKENS = 100_000;
+
   if (userInfo.isAnonymous) {
     return prisma.userTokens.upsert({
       where: {
@@ -50,7 +52,7 @@ export async function getOrCreateUserTokens(
       create: {
         anonymousSessionId: userInfo.id,
         modelId,
-        tokensLeft: 1000,
+        tokensLeft: DEFAULT_NEW_USER_TOKENS,
       },
     });
   } else {
@@ -65,7 +67,7 @@ export async function getOrCreateUserTokens(
       create: {
         userId: userInfo.id,
         modelId,
-        tokensLeft: 1000,
+        tokensLeft: DEFAULT_NEW_USER_TOKENS,
       },
     });
   }
