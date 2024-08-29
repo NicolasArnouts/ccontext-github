@@ -15,6 +15,7 @@ import {
 import OutOfTokensDialog from "@/components/OutOfTokensDialog";
 import PremiumModelDialog from "@/components/PremiumModelDialog";
 import Link from "next/link";
+import { useClerk } from "@clerk/nextjs";
 
 interface ChatInputProps {
   onSubmit: (message: string | null, modelId: string) => void;
@@ -31,6 +32,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   tokensLeft,
   onTokensUpdated,
 }) => {
+  const { redirectToSignIn } = useClerk();
   const [inputValue, setInputValue] = useState("");
   const [models, setModels] = useState<Model[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(true);
@@ -206,6 +208,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
     [inputValue, onSubmit, selectedModel, checkTokens, setTokenCost]
   );
 
+  const handleSignIn = () => {
+    setShowPremiumModelDialog(false);
+    redirectToSignIn({
+      redirectUrl: window.location.href,
+    });
+  };
+
   const handleModelSelect = (modelId: string) => {
     const selectedModelData = models.find((model) => model.id === modelId);
     if (selectedModelData && selectedModelData.tags.includes("Premium")) {
@@ -297,7 +306,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
       <PremiumModelDialog
         isOpen={showPremiumModelDialog}
         onClose={() => setShowPremiumModelDialog(false)}
-        onUpgrade={handleUpgrade}
+        onSignIn={handleSignIn}
         modelName={
           models.find((model) => model.id === selectedModel)?.name ||
           "Premium model"
