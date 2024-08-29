@@ -81,6 +81,22 @@ const EnhancedCContextExplanation: React.FC = () => {
           </ul>
         </Section>
 
+        <Section title="🌐 Open Source and Community-Driven:">
+          <p>
+            CContext-GitHub is an open-source project, and we believe in the
+            power of community collaboration. You can find our source code and
+            contribute to the project on our{" "}
+            <Link
+              href="https://github.com/NicolasArnoutsHoGent/ccontext-github"
+              className="text-blue-500 hover:underline"
+            >
+              GitHub repository
+            </Link>
+            . We welcome contributions, feature requests, and bug reports from
+            developers like you!
+          </p>
+        </Section>
+
         <p className="text-center text-lg font-semibold mt-6">
           Experience the future of code comprehension with CContext-GitHub -
           where AI meets open-source exploration! 🚀🔍
