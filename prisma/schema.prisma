@@ -71,6 +71,8 @@ model Model {
   name                  String       @unique
   tags                  String[]
   pricePerMillionTokens Float
+  initialTokens         Int // New field
+  resetTokens           Int // New field
   userTokens            UserTokens[]
   purchases             Purchase[]
 }

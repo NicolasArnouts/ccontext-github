@@ -1,43 +1,33 @@
-// lib/tokenResetService.ts
 import prisma from "@/lib/prismadb";
 
 export async function resetTokens() {
   const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
-  const DEFAULT_RESET_USER_TOKENS = 100_000;
 
   try {
-    const freeModels = await prisma.model.findMany({
-      where: {
-        tags: {
-          has: "Free",
+    const models = await prisma.model.findMany();
+
+    for (const model of models) {
+      await prisma.userTokens.updateMany({
+        where: {
+          modelId: model.id,
+          AND: [
+            {
+              OR: [
+                { resetTimestamp: { lt: fourHoursAgo } },
+                { resetTimestamp: null },
+              ],
+            },
+            { lastRequestTime: { lt: fourHoursAgo } },
+          ],
         },
-      },
-    });
-
-    const freeModelIds = freeModels.map((model) => model.id);
-
-    const result = await prisma.userTokens.updateMany({
-      where: {
-        modelId: {
-          in: freeModelIds,
+        data: {
+          tokensLeft: model.resetTokens,
+          resetTimestamp: new Date(),
         },
-        AND: [
-          {
-            OR: [
-              { resetTimestamp: { lt: fourHoursAgo } },
-              { resetTimestamp: null },
-            ],
-          },
-          { lastRequestTime: { lt: fourHoursAgo } },
-        ],
-      },
-      data: {
-        tokensLeft: DEFAULT_RESET_USER_TOKENS,
-        resetTimestamp: new Date(),
-      },
-    });
+      });
+    }
 
-    console.log(`Reset tokens for ${result.count} users`);
+    console.log("Tokens have been reset for eligible users");
   } catch (error) {
     console.error("Error resetting tokens:", error);
   }

@@ -38,7 +38,12 @@ export async function getOrCreateUserTokens(
   userInfo: UserInfo,
   modelId: string
 ) {
-  const DEFAULT_NEW_USER_TOKENS = 100_000;
+  const model = await prisma.model.findUnique({ where: { id: modelId } });
+  if (!model) {
+    throw new Error("Model not found");
+  }
+
+  const initialTokens = model.initialTokens;
 
   if (userInfo.isAnonymous) {
     return prisma.userTokens.upsert({
@@ -52,7 +57,7 @@ export async function getOrCreateUserTokens(
       create: {
         anonymousSessionId: userInfo.id,
         modelId,
-        tokensLeft: DEFAULT_NEW_USER_TOKENS,
+        tokensLeft: initialTokens,
       },
     });
   } else {
@@ -67,7 +72,7 @@ export async function getOrCreateUserTokens(
       create: {
         userId: userInfo.id,
         modelId,
-        tokensLeft: DEFAULT_NEW_USER_TOKENS,
+        tokensLeft: initialTokens,
       },
     });
   }
