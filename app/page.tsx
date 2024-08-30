@@ -6,7 +6,7 @@ import { useGithubCContextStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { BotMessageSquare, SlidersHorizontal } from "lucide-react";
 import { useScreenSize } from "@/hooks/useScreenSize";
-import CContextExplanation from "@/components/CContextExplanation";
+import EnhancedCContextExplanation from "@/components/EnhancedCContextExplanation";
 
 // Dynamically import components that might use browser APIs
 const GitHubCContext = dynamic(() => import("@/components/GitHubCContext"), {
@@ -82,18 +82,18 @@ export default function Home() {
         !showChat && ""
       )}
     >
-      <div className={cn(" w-full", !showChat && "sm:w-4/5 md:w-2/3 lg:w-1/2")}>
+      <div className={cn(" w-full", !showChat && "sm:w-4/5 md:w-3/4 lg:w-5/6")}>
         {isMobile ? (
           <div className="relative h-full overflow-hidden rounded-3xl ">
             {currentMobileView === "menu" ? (
               <div className="flex flex-col gap-6 rounded-3xl">
-                <div className="h-full overflow-scroll bg-gray-50 dark:bg-gray-700 p-4 rounded-3xl">
+                <div className="relative h-full  bg-gray-50 dark:bg-gray-700 p-4 rounded-3xl">
                   <GitHubCContext
                     onMarkdownGenerated={handleMarkdownGenerated}
                     onChatWithAI={handleChatWithAI}
                   />
                 </div>
-                <CContextExplanation />
+                <EnhancedCContextExplanation />
               </div>
             ) : (
               <div className="h-[85svh] bg-gray-50 dark:bg-gray-600 rounded-3xl overflow-scroll">
@@ -117,10 +117,10 @@ export default function Home() {
               className="rounded-2xl p-0 gap-0 m-0"
             >
               {showMenu && (
-                <ResizablePanel className="overflow-scroll">
+                <ResizablePanel className="">
                   <div
                     className={cn(
-                      "relative h-[85vh] overflow-scroll bg-gray-50 dark:bg-gray-700 p-4",
+                      "relative h-[85vh] bg-gray-50 dark:bg-gray-700 p-4 overflow-auto",
                       showChat ? "h-[85vh]" : "h-full"
                     )}
                   >
@@ -149,7 +149,7 @@ export default function Home() {
               )}
             </ResizablePanelGroup>
 
-            <CContextExplanation />
+            {!showChat && <EnhancedCContextExplanation />}
           </div>
         )}
       </div>

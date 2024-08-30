@@ -17,8 +17,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const baseDir =
-    "/Users/narn/Desktop/school/ccontext-github/temp_environments";
+  const baseDir = process.env.TEMP_ENV_BASE_DIR;
+  if (!baseDir) {
+    throw new Error("TEMP_ENV_BASE_DIR environment variable not set");
+  }
+
   const userPathName = isAnonUser(userId) ? "anonymous" : userId;
   const userDir = path.join(baseDir, userPathName);
   const repoPath = path.join(userDir, envId);

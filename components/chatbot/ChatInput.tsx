@@ -11,10 +11,13 @@ import {
   getInputTokens,
   debounce,
   concatenateMessages,
+  TOKEN_WARNING_THRESHOLD,
 } from "@/lib/helpers-client";
 import OutOfTokensDialog from "@/components/OutOfTokensDialog";
 import PremiumModelDialog from "@/components/PremiumModelDialog";
 import Link from "next/link";
+import { useClerk, useUser } from "@clerk/nextjs";
+import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
   onSubmit: (message: string | null, modelId: string) => void;
@@ -31,6 +34,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
   tokensLeft,
   onTokensUpdated,
 }) => {
+  const { redirectToSignIn } = useClerk();
+  const { isSignedIn } = useUser();
   const [inputValue, setInputValue] = useState("");
   const [models, setModels] = useState<Model[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(true);
@@ -206,9 +211,20 @@ const ChatInput: React.FC<ChatInputProps> = ({
     [inputValue, onSubmit, selectedModel, checkTokens, setTokenCost]
   );
 
+  const handleSignIn = () => {
+    setShowPremiumModelDialog(false);
+    redirectToSignIn({
+      redirectUrl: window.location.href,
+    });
+  };
+
   const handleModelSelect = (modelId: string) => {
     const selectedModelData = models.find((model) => model.id === modelId);
-    if (selectedModelData && selectedModelData.tags.includes("Premium")) {
+    if (
+      selectedModelData &&
+      selectedModelData.tags.includes("Premium") &&
+      !isSignedIn
+    ) {
       setShowPremiumModelDialog(true);
     } else {
       setSelectedModel(modelId);
@@ -265,9 +281,17 @@ const ChatInput: React.FC<ChatInputProps> = ({
               <div className="text-sm text-gray-600 dark:text-gray-300">
                 <div className="">
                   Chat cost:{" "}
-                  {typeof tokenCost === "number"
-                    ? tokenCost.toLocaleString()
-                    : "N/A"}
+                  <span
+                    className={cn(
+                      typeof tokenCost === "number" &&
+                        tokenCost > TOKEN_WARNING_THRESHOLD &&
+                        "text-red-600"
+                    )}
+                  >
+                    {typeof tokenCost === "number"
+                      ? tokenCost.toLocaleString()
+                      : "N/A"}
+                  </span>
                 </div>
                 <div className="">
                   Tokens left:{" "}
@@ -297,7 +321,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
       <PremiumModelDialog
         isOpen={showPremiumModelDialog}
         onClose={() => setShowPremiumModelDialog(false)}
-        onUpgrade={handleUpgrade}
+        onSignIn={handleSignIn}
         modelName={
           models.find((model) => model.id === selectedModel)?.name ||
           "Premium model"

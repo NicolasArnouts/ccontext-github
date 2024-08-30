@@ -4,6 +4,7 @@ import { getEncoding } from "js-tiktoken";
 import { ChatCompletionMessage } from "openai/resources/index.mjs";
 import { Message } from "@/lib/store";
 import { ChatMessage } from "@prisma/client";
+import { useMemo } from "react";
 
 export function debounce<F extends (...args: any[]) => any>(
   func: F,
@@ -75,18 +76,45 @@ export function concatenateMessages(messages: Message[]): string {
 }
 
 const encoding = getEncoding("cl100k_base");
+
 export function getInputTokens(
   messages: ChatMessage | ChatMessage[] | string
 ): number {
   const processMessage = (message: ChatMessage): number => {
-    return encoding.encode(message.content).length;
+    try {
+      // Remove or replace problematic tokens
+      const cleanContent = message.content.replace(/<\|endoftext\|>/g, "");
+      return encoding.encode(cleanContent).length;
+    } catch (error) {
+      console.warn("Error encoding message:", error);
+      // Fallback to a simple character count if encoding fails
+      return message.content.length;
+    }
   };
 
-  if (typeof messages === "string") {
-    return encoding.encode(messages).length;
-  } else if (Array.isArray(messages)) {
-    return messages.reduce((acc, message) => acc + processMessage(message), 0);
-  } else {
-    return processMessage(messages);
+  try {
+    if (typeof messages === "string") {
+      const cleanMessage = messages.replace(/<\|endoftext\|>/g, "");
+      return encoding.encode(cleanMessage).length;
+    } else if (Array.isArray(messages)) {
+      return messages.reduce(
+        (acc, message) => acc + processMessage(message),
+        0
+      );
+    } else {
+      return processMessage(messages);
+    }
+  } catch (error) {
+    console.warn("Error in getInputTokens:", error);
+    // Fallback to a simple character count if encoding fails
+    if (typeof messages === "string") {
+      return messages.length;
+    } else if (Array.isArray(messages)) {
+      return messages.reduce((acc, message) => acc + message.content.length, 0);
+    } else {
+      return messages.content.length;
+    }
   }
 }
+
+export const TOKEN_WARNING_THRESHOLD = 100_000;

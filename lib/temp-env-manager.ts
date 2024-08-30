@@ -1,16 +1,9 @@
-// lib/temp-env-manager.ts
 import fs from "fs";
 import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
-import axios from "axios";
 import prismadb from "@/lib/prismadb";
-import {
-  validateGitHubUrl,
-  sanitizeInput,
-  generateRepoSlug,
-  extractFileTreeFromOutput,
-} from "@/lib/helpers";
+import { validateGitHubUrl, generateRepoSlug } from "@/lib/helpers";
 
 const execAsync = promisify(exec);
 
@@ -174,5 +167,10 @@ export class TempEnvManager {
         }
       }
     }
+  }
+
+  // New method to be called from the API route
+  async cleanupExpiredEnvironments(): Promise<void> {
+    await this.cleanupExpiredRepositories();
   }
 }

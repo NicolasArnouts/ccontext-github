@@ -1,50 +1,41 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { SignInButton, UserButton, useUser } from "@clerk/nextjs";
 import { ModeToggle } from "@/components/ModeToggle";
 import Link from "next/link";
-import { useUserStore } from "@/lib/store";
+
+interface UserInfo {
+  isAuthenticated: boolean;
+  userId: string;
+  userTokens: any[]; // You might want to type this more specifically based on your UserTokens model
+}
 
 const Header = () => {
   const { isLoaded, isSignedIn, user } = useUser();
-  const { userId, anonymousId, setUserId, setAnonymousId } = useUserStore();
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
         const response = await fetch("/api/user-info");
         const data = await response.json();
-
-        if (data.isAuthenticated) {
-          setUserId(data.user.id);
-          setAnonymousId(null);
-        } else {
-          setUserId(null);
-          setAnonymousId(data.anonymousId);
-        }
+        setUserInfo(data);
       } catch (error) {
         console.error("Error fetching user info:", error);
       }
     };
 
-    if (isLoaded) {
-      if (isSignedIn) {
-        setUserId(user.id);
-        setAnonymousId(null);
-      } else {
-        fetchUserInfo();
-      }
-    }
-  }, [isLoaded, isSignedIn, user, setUserId, setAnonymousId]);
+    fetchUserInfo();
+  }, [isSignedIn]);
 
   return (
     <header className="border-b">
       <div className="container mx-auto flex justify-between items-center py-4">
-        <a href="/">
+        <Link href="/">
           <h1 className="text-2xl font-bold">GitHub CContext</h1>
           <h2 className="text-sm">Chat with any github codebase you want!</h2>
-        </a>
+        </Link>
 
         <div className="flex items-center gap-4">
           <ModeToggle />
@@ -52,14 +43,10 @@ const Header = () => {
             {isLoaded ? (
               isSignedIn ? (
                 <>
-                  {/* <span className="text-sm">User ID: {user.id}</span> */}
                   <UserButton afterSignOutUrl="/" />
                 </>
               ) : (
                 <>
-                  {/* <span className="text-sm">
-                    Anonymous ID: {anonymousId || "Loading..."}
-                  </span> */}
                   <SignInButton mode="modal">
                     <button className="text-sm font-medium">Sign In</button>
                   </SignInButton>

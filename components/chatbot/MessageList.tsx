@@ -22,7 +22,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [, scrollToBottom]);
+  }, [scrollToBottom]);
 
   return (
     <div className="flex-1 p-4 space-y-4 overflow-auto relative">

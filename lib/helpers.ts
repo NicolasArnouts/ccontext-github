@@ -38,6 +38,13 @@ export async function getOrCreateUserTokens(
   userInfo: UserInfo,
   modelId: string
 ) {
+  const model = await prisma.model.findUnique({ where: { id: modelId } });
+  if (!model) {
+    throw new Error("Model not found");
+  }
+
+  const initialTokens = model.initialTokens;
+
   if (userInfo.isAnonymous) {
     return prisma.userTokens.upsert({
       where: {
@@ -50,7 +57,7 @@ export async function getOrCreateUserTokens(
       create: {
         anonymousSessionId: userInfo.id,
         modelId,
-        tokensLeft: 1000,
+        tokensLeft: initialTokens,
       },
     });
   } else {
@@ -65,7 +72,7 @@ export async function getOrCreateUserTokens(
       create: {
         userId: userInfo.id,
         modelId,
-        tokensLeft: 1000,
+        tokensLeft: initialTokens,
       },
     });
   }
@@ -210,8 +217,7 @@ export function getInputTokens(
 }
 
 export function getClientIpAddress(req: NextRequest): string {
-  const ip =
-    req.ip ?? req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
+  const ip = req.ip ?? req.headers.get("x-real-ip")?.split(",")[0] ?? "unknown";
 
   if (ip === "unknown") {
     console.warn("Unable to determine client IP address");

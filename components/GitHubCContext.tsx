@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,8 +5,13 @@ import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import ParsedFileTree from "@/components/ParsedFileTree";
 import { useGithubCContextStore } from "@/lib/store";
-import { parseCommandOutput } from "@/lib/helpers-client";
+import {
+  parseCommandOutput,
+  TOKEN_WARNING_THRESHOLD,
+} from "@/lib/helpers-client";
 import { useChatInterface } from "@/components/chatbot/ChatInterface";
+import { Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface GitHubCContextProps {
   onMarkdownGenerated: (content: string) => void;
@@ -85,15 +88,24 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
 
       let cmdOutput = "";
 
-      const params = {
-        envId,
+      const params: Record<string, string> = {
         includes,
         excludes,
         maxTokens,
       };
 
+      // Only add envId to params if it's defined
+      if (envId) {
+        params.envId = envId;
+      }
+
+      // Filter out undefined values
+      const filteredParams = Object.fromEntries(
+        Object.entries(params).filter(([_, v]) => v !== undefined)
+      );
+
       const eventSource = new EventSource(
-        `/api/run-ccontext?${new URLSearchParams(params).toString()}`
+        `/api/run-ccontext?${new URLSearchParams(filteredParams).toString()}`
       );
 
       eventSource.onmessage = (event) => {
@@ -162,12 +174,25 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
     }
   };
 
-  const handleCopyToClipboard = (content: string) => {
-    navigator.clipboard.writeText(content);
-    toast({
-      title: "Copied!",
-      description: "Content copied to clipboard.",
-    });
+  const handleCopyToClipboard = () => {
+    if (markdownContent) {
+      navigator.clipboard.writeText(markdownContent).then(
+        () => {
+          toast({
+            title: "Copied!",
+            description: "Markdown content has been copied to clipboard.",
+          });
+        },
+        (err) => {
+          console.error("Could not copy text: ", err);
+          toast({
+            title: "Error",
+            description: "Failed to copy to clipboard. Please try again.",
+            variant: "destructive",
+          });
+        }
+      );
+    }
   };
 
   const handleDownloadMarkdown = () => {
@@ -201,7 +226,6 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
   const handleChatWithAI = () => {
     if (markdownContent) {
       onMarkdownGenerated(markdownContent);
-      // setMessages([...messages, { role: "user", content: markdownContent }]);
       setMessages([{ role: "user", content: markdownContent }]);
       onChatWithAI();
     } else {
@@ -257,12 +281,26 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
       )}
 
       {calculatedTokens && (
-        <div className="flex flex-wrap justify-center text-center items-center gap-2">
-          <span className="text-sm">Repo Tokens:</span>
-          <span className="font-bold">{calculatedTokens.toLocaleString()}</span>
+        <div className="flex flex-col flex-wrap justify-center text-center items-center gap-2">
+          <div className="flex flex-wrap justify-center text-center items-center gap-2">
+            <span className="text-sm">Repo Tokens:</span>
+            <span
+              className={cn(
+                "font-bold",
+                calculatedTokens > TOKEN_WARNING_THRESHOLD && "text-red-600"
+              )}
+            >
+              {calculatedTokens.toLocaleString()}
+            </span>
+          </div>
+
+          {calculatedTokens > TOKEN_WARNING_THRESHOLD && (
+            <span className="text-red-600 text-sm font-semibold">
+              Lots of tokens, try excluding some files
+            </span>
+          )}
         </div>
       )}
-
       {(markdownContent || pdfExists) && (
         <div>
           <div className="space-y-4">
@@ -277,23 +315,22 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
                   Download PDF
                 </Button>
               )}
-              <Button onClick={handleChatWithAI} className="flex-grow">
-                Chat with AI
+              <Button onClick={handleCopyToClipboard} className="flex-grow">
+                Copy to Clipboard
               </Button>
             </div>
+            <Button
+              onClick={handleChatWithAI}
+              className="flex-grow flex-1 w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transform transition-all duration-200 ease-in-out hover:scale-[103%] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
+            >
+              <Sparkles className="w-5 h-5 mr-2" />
+              Chat with AI
+            </Button>
           </div>
         </div>
       )}
 
       {fileTree && <ParsedFileTree fileTree={fileTree} />}
-
-      {/* Uncomment if you want to show the command output
-      <CommandOutput
-        calculatedTokens={calculatedTokens}
-        output={output}
-        handleCopyToClipboard={handleCopyToClipboard}
-      />
-      */}
     </div>
   );
 };
