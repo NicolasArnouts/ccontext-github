@@ -49,7 +49,6 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
   const [output, setOutput] = useState("");
 
   const { toast } = useToast();
-  const { handleSendMessage } = useChatInterface();
 
   const handleGithubUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setGithubUrl(e.target.value);
