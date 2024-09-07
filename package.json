@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "docker:rebuild": "bash ./scripts/rebuild_deploy.sh"
   },
   "dependencies": {
     "@ai-sdk/openai": "^0.0.47",
