@@ -10,7 +10,7 @@ log() {
 
 # Navigate to the project directory
 # Replace '/path/to/your/project' with the actual path to your project
-cd /path/to/your/project
+#cd ..
 
 # Pull the latest changes from the git repository
 # Uncomment and modify if you want to pull from a specific branch
