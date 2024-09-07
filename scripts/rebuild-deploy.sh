@@ -19,23 +19,19 @@ log "Pulling latest changes from git..."
 
 # Stop the running containers
 log "Stopping running containers..."
-docker-compose down
-
-# Remove old images (optional)
-log "Removing old images..."
-docker image prune -af
+docker compose down
 
 # Build the new Docker images
 log "Building new Docker images..."
-docker-compose build
+docker compose build
 
 # Start the new containers
 log "Starting new containers..."
-docker-compose up -d
+docker compose up -d
 
 # Check if the containers are running
 log "Checking container status..."
-docker-compose ps
+docker compose ps
 
 # Optional: Run any post-deployment tasks
 # log "Running post-deployment tasks..."
