@@ -18,9 +18,11 @@ services:
     restart: unless-stopped
     networks:
       - app-network
+    user: "1001:1001"  # This matches the UID:GID of the nextjs user in the Dockerfile
 
 volumes:
   temp_environments:
+    driver: local
 
 networks:
   app-network:

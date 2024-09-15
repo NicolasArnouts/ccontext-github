@@ -42,9 +42,11 @@ RUN adduser -S nextjs -u 1001
 RUN chown -R nextjs:nodejs /app
 USER nextjs
 
-# Set up temp environments
-RUN mkdir -p /app/temp_environments
+# Set up temp environments with correct permissions
+RUN mkdir -p /app/temp_environments && chown nextjs:nodejs /app/temp_environments
 ENV TEMP_ENV_BASE_DIR=/app/temp_environments
+
+USER nextjs
 
 # Set environment variables
 ENV NODE_ENV production
