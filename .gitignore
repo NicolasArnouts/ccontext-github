@@ -39,3 +39,5 @@ next-env.d.ts
 # TEMP FOLDERS
 temp_environments
 /temp_environments
+# Sentry Config File
+.env.sentry-build-plugin
