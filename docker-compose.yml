@@ -13,12 +13,12 @@ services:
     env_file:
       - .env
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - TEMP_ENV_BASE_DIR=/app/temp_environments
     restart: unless-stopped
     networks:
       - app-network
-    user: "1001:1001"  # This matches the UID:GID of the nextjs user in the Dockerfile
+    user: "1001:1001" # This matches the UID:GID of the nextjs user in the Dockerfile
 
 volumes:
   temp_environments:

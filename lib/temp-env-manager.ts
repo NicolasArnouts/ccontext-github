@@ -18,8 +18,15 @@ export class TempEnvManager {
       path.join(process.cwd(), "temp_environments");
     this.lifetime = lifetime;
 
+    // Ensure base directory exists
     if (!fs.existsSync(this.baseDir)) {
       fs.mkdirSync(this.baseDir, { recursive: true });
+    }
+
+    // Ensure 'anonymous' subdirectory exists
+    const anonymousDir = path.join(this.baseDir, "anonymous");
+    if (!fs.existsSync(anonymousDir)) {
+      fs.mkdirSync(anonymousDir, { recursive: true });
     }
 
     console.log(`TempEnvManager initialized with baseDir: ${this.baseDir}`);
@@ -166,6 +173,8 @@ export class TempEnvManager {
           await fs.promises.rm(repoPath, { recursive: true, force: true });
         }
       }
+    } else {
+      fs.mkdirSync(anonymousDir, { recursive: true });
     }
   }
 
