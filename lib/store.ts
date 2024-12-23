@@ -55,7 +55,7 @@ interface GithubCContextState {
 
 export const useGithubCContextStore = create<GithubCContextState>((set) => ({
   // Initial state
-  githubUrl: "",
+  githubUrl: "https://github.com/NicolasArnouts/ccontext",
   ccontextCommand: "ccontext -gm",
   output: "",
   markdownContent: null,

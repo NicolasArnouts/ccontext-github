@@ -61,7 +61,10 @@ const CContextExplanation = () => {
           </CardHeader>
           <CardContent>
             <ol className="list-decimal list-inside space-y-2 text-gray-600 dark:text-gray-300">
-              <li>Enter a GitHub repository URL</li>
+              <li>
+                Enter a GitHub repository URL, e.g.
+                https://github.com/NicolasArnouts/ccontext
+              </li>
               <li>Our system clones the repository</li>
               <li>CContext analyzes the codebase</li>
               <li>Receive a detailed summary and structure overview</li>
