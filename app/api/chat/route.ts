@@ -6,11 +6,9 @@ import {
   getUserInfo,
   getOrCreateUserTokens,
   getInputTokens,
-  stripAnsiCodes,
   UserInfo,
 } from "@/lib/helpers";
-import { TokenJS } from "token.js";
-import { ChatCompletionMessageParam } from "openai/resources/chat/completions.mjs";
+import { TokenJS, ChatCompletionMessageParam } from "token.js";
 
 const tokenjs = new TokenJS();
 
@@ -49,7 +47,7 @@ function getMessageContent(message: ChatCompletionMessageParam): string {
   } else if (Array.isArray(message.content)) {
     return message.content
       .map((part) => {
-        if ("text" in part) {
+        if (typeof part === "object" && "text" in part) {
           return part.text;
         }
         return "";

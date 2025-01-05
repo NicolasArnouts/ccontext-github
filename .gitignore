@@ -41,3 +41,9 @@ temp_environments
 /temp_environments
 # Sentry Config File
 .env.sentry-build-plugin
+
+
+# logs
+docker_build.log
+**/*output.log
+dikke_logs.txt

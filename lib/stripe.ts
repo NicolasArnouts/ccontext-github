@@ -6,7 +6,7 @@ if (!process.env.STRIPE_API_KEY) {
 }
 
 const stripe = new Stripe(process.env.STRIPE_API_KEY, {
-  apiVersion: "2024-06-20", // Use the latest API version
+  apiVersion: "2024-12-18.acacia", // Use the latest API version
   typescript: true,
 });
 
