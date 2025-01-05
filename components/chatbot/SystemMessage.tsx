@@ -41,7 +41,6 @@ const SystemMessage: React.FC<SystemMessageProps> = ({ content }) => {
           onClick={handleCopyToClipboard}
         >
           <ClipboardCopy className="h-4 w-4 mr-2" />
-          {isCopied ? "Copied!" : "Copy"}
         </Button>
         <div className="overflow-x-auto pr-20">
           <MarkdownDisplay content={content} />

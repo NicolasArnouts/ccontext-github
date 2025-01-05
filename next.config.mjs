@@ -2,7 +2,10 @@ import { withSentryConfig } from "@sentry/nextjs";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+
   experimental: {},
+
+  outputFileTracingIncludes: { "/api/**/*": ["./node_modules/**/*.wasm"] },
   eslint: {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.
@@ -12,6 +15,15 @@ const nextConfig = {
   compiler: {
     // Remove console logs only in production
     removeConsole: process.env.NODE_ENV === "production",
+  },
+
+  webpack(config, { isServer, dev }) {
+    config.experiments = {
+      asyncWebAssembly: true,
+      layers: true,
+    };
+
+    return config;
   },
 };
 

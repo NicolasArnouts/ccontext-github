@@ -1,10 +1,8 @@
 "use client";
 
 import { getEncoding } from "js-tiktoken";
-import { ChatCompletionMessage } from "openai/resources/index.mjs";
 import { Message } from "@/lib/store";
 import { ChatMessage } from "@prisma/client";
-import { useMemo } from "react";
 
 export function debounce<F extends (...args: any[]) => any>(
   func: F,

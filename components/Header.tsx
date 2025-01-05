@@ -1,3 +1,4 @@
+// components/Header.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,12 +9,17 @@ import Link from "next/link";
 interface UserInfo {
   isAuthenticated: boolean;
   userId: string;
-  userTokens: any[]; // You might want to type this more specifically based on your UserTokens model
+  userTokens: any[];
 }
 
 const Header = () => {
   const { isLoaded, isSignedIn, user } = useUser();
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -29,6 +35,11 @@ const Header = () => {
     fetchUserInfo();
   }, [isSignedIn]);
 
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return null;
+  }
+
   return (
     <header className="border-b">
       <div className="container mx-auto flex justify-between items-center py-4">
@@ -40,20 +51,16 @@ const Header = () => {
         <div className="flex items-center gap-4">
           <ModeToggle />
           <div className="flex items-center gap-2">
-            {isLoaded ? (
-              isSignedIn ? (
-                <>
+            {isLoaded && (
+              <>
+                {isSignedIn ? (
                   <UserButton afterSignOutUrl="/" />
-                </>
-              ) : (
-                <>
+                ) : (
                   <SignInButton mode="modal">
                     <button className="text-sm font-medium">Sign In</button>
                   </SignInButton>
-                </>
-              )
-            ) : (
-              <span className="text-sm">Loading...</span>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -2,11 +2,11 @@
 import axios from "axios";
 import path from "path";
 import prisma from "@/lib/prismadb";
-import { ChatMessage } from "@prisma/client";
-import { encoding_for_model, Tiktoken, TiktokenModel } from "tiktoken";
+import cl100k_base from "tiktoken/encoders/cl100k_base.json";
+import { Tiktoken } from "tiktoken/lite";
+
 import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { ChatCompletionMessageParam } from "token.js";
 
 export interface UserInfo {
   id: string;
@@ -204,7 +204,11 @@ export function stripAnsiCodes(str: string): string {
 export function getInputTokens(
   messages: any // Using any to bypass type checking
 ): number {
-  const encoder = encoding_for_model("gpt-4o-mini");
+  const encoder = new Tiktoken(
+    cl100k_base.bpe_ranks,
+    cl100k_base.special_tokens,
+    cl100k_base.pat_str
+  );
 
   const processMessage = (message: any): number => {
     if (message.content === null || message.content === undefined) {
