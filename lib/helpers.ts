@@ -84,12 +84,19 @@ export function sanitizeInput(input: string): string {
 }
 
 export function validateGitHubUrl(url: string): boolean {
-  const githubUrlRegex = /^https:\/\/github\.com\/[\w-]+\/[\w-]+$/;
-  const isValid = githubUrlRegex.test(url);
+  // Handle SSH format (git@github.com:user/repo.git)
+  const sshRegex = /^git@github\.com:[\w-]+\/[\w.-]+(?:\.git)?(?:\/.*)?$/;
+  
+  // Handle HTTPS format (https://github.com/user/repo)
+  const httpsRegex = /^https:\/\/github\.com\/[\w-]+\/[\w.-]+(?:\.git)?(?:\/.*)?$/;
+
+  const isValid = sshRegex.test(url) || httpsRegex.test(url);
 
   if (!isValid) {
     throw new Error(
-      "Invalid GitHub URL. Please ensure it follows the format: https://github.com/username/repository"
+      "Invalid GitHub URL. Please ensure it follows either format:\n" +
+      "- HTTPS: https://github.com/username/repository\n" +
+      "- SSH: git@github.com:username/repository.git"
     );
   }
 
@@ -111,14 +118,27 @@ export function formatBytes(bytes: number, decimals = 2): string {
 
 export function extractRepoInfo(
   url: string
-): { owner: string; repo: string } | null {
-  const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)/);
-  if (match) {
+): { owner: string; repo: string; subPath?: string } | null {
+  // Handle SSH format
+  const sshMatch = url.match(/^git@github\.com:([\w-]+)\/([\w.-]+?)(?:\.git)?(?:\/(.+))?$/);
+  if (sshMatch) {
     return {
-      owner: match[1],
-      repo: match[2],
+      owner: sshMatch[1],
+      repo: sshMatch[2],
+      subPath: sshMatch[3],
     };
   }
+
+  // Handle HTTPS format
+  const httpsMatch = url.match(/github\.com\/([\w-]+)\/([\w.-]+?)(?:\.git)?(?:\/(?:tree|blob)\/[^/]+\/(.+)|\/(.+))?$/);
+  if (httpsMatch) {
+    return {
+      owner: httpsMatch[1],
+      repo: httpsMatch[2],
+      subPath: httpsMatch[3] || httpsMatch[4], // Use either tree/blob path or direct path
+    };
+  }
+
   return null;
 }
 
@@ -135,23 +155,39 @@ export async function getLatestCommitFromGitHub(
   }
 
   const { owner, repo } = repoInfo;
-  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/commits/main`;
-
+  
   try {
-    const response = await axios.get(apiUrl, {
+    // First, get the repository info to find the default branch
+    const repoApiUrl = `https://api.github.com/repos/${owner}/${repo}`;
+    const repoResponse = await axios.get(repoApiUrl, {
       headers: {
         Accept: "application/vnd.github.v3+json",
         "User-Agent": "CContext-App",
       },
     });
 
-    if (response.data && response.data.sha) {
-      return response.data.sha;
+    if (!repoResponse.data || !repoResponse.data.default_branch) {
+      throw new Error("Unable to find default branch in the GitHub API response");
+    }
+
+    const defaultBranch = repoResponse.data.default_branch;
+    
+    // Then, get the latest commit from the default branch
+    const commitApiUrl = `https://api.github.com/repos/${owner}/${repo}/commits/${defaultBranch}`;
+    const commitResponse = await axios.get(commitApiUrl, {
+      headers: {
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "CContext-App",
+      },
+    });
+
+    if (commitResponse.data && commitResponse.data.sha) {
+      return commitResponse.data.sha;
     } else {
       throw new Error("Unable to find commit SHA in the GitHub API response");
     }
   } catch (error) {
-    console.error("Error fetching latest commit from GitHub:", error);
+    console.error("Error fetching from GitHub:", error);
     throw new Error("Failed to fetch latest commit from GitHub");
   }
 }

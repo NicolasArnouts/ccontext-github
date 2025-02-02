@@ -5,12 +5,13 @@ import { getUserInfo } from "@/lib/helpers";
 export async function POST(req: NextRequest) {
   try {
     const userInfo = await getUserInfo(req);
-    const { githubUrl } = await req.json();
+    const { githubUrl, subPath } = await req.json();
 
     const tempEnvManager = new TempEnvManager();
     const repository = await tempEnvManager.createOrUpdateRepository(
       githubUrl,
-      userInfo.id
+      userInfo.id,
+      subPath
     );
 
     return NextResponse.json({ repositoryId: repository.slug });

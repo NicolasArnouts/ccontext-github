@@ -52,12 +52,57 @@ export class TempEnvManager {
     return path.join(userDir, repoSlug);
   }
 
-  cloneRepo = async (repoUrl: string, repoFilePath: string) => {
+  private async copySubPath(sourcePath: string, targetPath: string, subPath: string) {
+    const fullSourcePath = path.join(sourcePath, subPath);
+    const fullTargetPath = targetPath;
+
+    if (!fs.existsSync(fullSourcePath)) {
+      throw new Error(`Subdirectory ${subPath} does not exist in the repository`);
+    }
+
+    // Create target directory
+    fs.mkdirSync(fullTargetPath, { recursive: true });
+
+    // Copy the subdirectory
+    await execAsync(`cp -r "${fullSourcePath}"/* "${fullTargetPath}"/`);
+  }
+
+  cloneRepo = async (repoUrl: string, repoFilePath: string, subPath?: string) => {
     console.log(`cloning repo to ${repoFilePath}`);
-    await execAsync(`git clone ${repoUrl} ${repoFilePath}`);
+    
+    // Create a temporary directory for full clone
+    const tempClonePath = `${repoFilePath}_temp`;
+    
+    try {
+      // Clone the full repository to temp directory
+      await execAsync(`git clone ${repoUrl} ${tempClonePath}`);
+
+      if (subPath) {
+        // Create the final directory
+        fs.mkdirSync(repoFilePath, { recursive: true });
+        
+        // Copy only the specified subdirectory
+        await this.copySubPath(tempClonePath, repoFilePath, subPath);
+        
+        // Clean up temp directory
+        await fs.promises.rm(tempClonePath, { recursive: true, force: true });
+      } else {
+        // If no subPath, just move the temp directory to final location
+        if (fs.existsSync(repoFilePath)) {
+          await fs.promises.rm(repoFilePath, { recursive: true, force: true });
+        }
+        await fs.promises.rename(tempClonePath, repoFilePath);
+      }
+    } catch (error) {
+      // Clean up temp directory in case of error
+      if (fs.existsSync(tempClonePath)) {
+        await fs.promises.rm(tempClonePath, { recursive: true, force: true });
+      }
+      throw error;
+    }
   };
 
-  async createOrUpdateRepository(repoUrl: string, userId: string) {
+  async createOrUpdateRepository(repoUrl: string, userId: string, subPath?: string) {
     validateGitHubUrl(repoUrl);
 
     const slug = await generateRepoSlug(repoUrl);
@@ -91,14 +136,14 @@ export class TempEnvManager {
 
       if (!this.repoExistsInFileSystem(slug, userId)) {
         console.log("Repository doesn't exist on the file system, cloning it");
-        await this.cloneRepo(repoUrl, repoFilePath);
+        await this.cloneRepo(repoUrl, repoFilePath, subPath);
       } else {
         console.log("Repository exists on the file system, no action needed");
       }
     } else {
       console.log("Repository doesn't exist in the database");
       if (!this.repoExistsInFileSystem(slug, userId)) {
-        await this.cloneRepo(repoUrl, repoFilePath);
+        await this.cloneRepo(repoUrl, repoFilePath, subPath);
       }
     }
 

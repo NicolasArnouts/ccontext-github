@@ -13,6 +13,46 @@ import { useChatInterface } from "@/components/chatbot/ChatInterface";
 import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Add URL parsing utilities
+const parseGitHubUrl = (url: string) => {
+  try {
+    // Handle SSH format (git@github.com:user/repo.git)
+    const sshMatch = url.match(/^git@github\.com:([^/]+)\/([^/]+?)(\.git)?(?:\/(.+))?$/);
+    if (sshMatch) {
+      return {
+        owner: sshMatch[1],
+        repo: sshMatch[2],
+        subPath: sshMatch[4] || "",
+        isValid: true,
+      };
+    }
+
+    // Handle HTTPS formats
+    const urlObj = new URL(url);
+    if (!urlObj.hostname.includes("github.com")) {
+      return { isValid: false };
+    }
+
+    const pathParts = urlObj.pathname.split("/").filter(Boolean);
+    if (pathParts.length < 2) {
+      return { isValid: false };
+    }
+
+    const owner = pathParts[0];
+    let repo = pathParts[1].replace(/\.git$/, "");
+    const subPath = pathParts.slice(2).join("/");
+
+    return {
+      owner,
+      repo,
+      subPath,
+      isValid: true,
+    };
+  } catch (error) {
+    return { isValid: false };
+  }
+};
+
 interface GitHubCContextProps {
   onMarkdownGenerated: (content: string) => void;
   onChatWithAI: () => void;
@@ -47,17 +87,36 @@ const GitHubCContext: React.FC<GitHubCContextProps> = ({
   const [excludes, setExcludes] = useState("");
   const [isCloned, setIsCloned] = useState(false);
   const [output, setOutput] = useState("");
+  const [subPath, setSubPath] = useState("");
 
   const { toast } = useToast();
 
   const handleGithubUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setGithubUrl(e.target.value);
+    const url = e.target.value;
+    setGithubUrl(url);
+    
+    const parsed = parseGitHubUrl(url);
+    if (parsed.isValid && parsed.subPath) {
+      setSubPath(parsed.subPath);
+    } else {
+      setSubPath("");
+    }
   };
 
   const handleClone = async () => {
     try {
       setIsLoading(true);
-      const response = await axios.post("/api/clone", { githubUrl });
+      const parsed = parseGitHubUrl(githubUrl);
+      
+      if (!parsed.isValid) {
+        throw new Error("Invalid GitHub URL format");
+      }
+
+      const response = await axios.post("/api/clone", { 
+        githubUrl,
+        subPath: parsed.subPath 
+      });
+      
       setEnvId(response.data.repositoryId);
       setIsCloned(true);
     } catch (error) {
