@@ -21,8 +21,8 @@ trap 'handle_error $LINENO' ERR
 cd "$(dirname "$0")/.." || { log "Failed to change to project directory"; exit 1; }
 
 # Pull the latest changes from the git repository
-log "Pulling latest changes from git..."
-git pull origin dev || { log "Failed to pull latest changes"; exit 1; }
+# log "Pulling latest changes from git..."
+# git pull origin dev || { log "Failed to pull latest changes"; exit 1; }
 
 # Stop the running containers
 log "Stopping running containers..."

@@ -4,7 +4,6 @@ import { NextRequest } from "next/server";
 import { TempEnvManager } from "@/lib/temp-env-manager";
 import { getUserInfo, sanitizeInput } from "@/lib/helpers";
 import { spawn } from "child_process";
-import { Readable } from "stream";
 
 const tempEnvManager = new TempEnvManager();
 
@@ -42,6 +41,8 @@ export async function GET(req: NextRequest) {
     sanitizedExcludes ? `-e "${sanitizedExcludes}"` : ""
   } ${sanitizedIncludes ? `-i "${sanitizedIncludes}"` : ""} -gm -g`;
 
+  const encoder = new TextEncoder();
+
   const stream = new ReadableStream({
     start(controller) {
       const process = spawn(cmdString, {
@@ -49,38 +50,63 @@ export async function GET(req: NextRequest) {
         shell: true,
       });
 
+      let isStreamClosed = false;
+
+      // Helper function to safely enqueue data
+      const safeEnqueue = (data: string) => {
+        if (!isStreamClosed) {
+          try {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ output: data })}\n\n`));
+          } catch (error) {
+            console.error("Error enqueueing data:", error);
+          }
+        }
+      };
+
       process.stdout.on("data", (data) => {
-        controller.enqueue(
-          `data: ${JSON.stringify({ output: data.toString() })}\n\n`
-        );
+        safeEnqueue(data.toString());
       });
 
       process.stderr.on("data", (data) => {
-        controller.enqueue(
-          `data: ${JSON.stringify({ output: `Error: ${data.toString()}` })}\n\n`
-        );
+        safeEnqueue(`Error: ${data.toString()}`);
+      });
+
+      process.on("error", (error) => {
+        if (!isStreamClosed) {
+          console.error("Process error:", error);
+          safeEnqueue(`Error: ${error.message}`);
+          controller.close();
+          isStreamClosed = true;
+        }
       });
 
       process.on("close", (code) => {
-        if (code === 0) {
-          controller.enqueue(
-            `data: ${JSON.stringify({ status: "success" })}\n\n`
-          );
-        } else {
-          controller.enqueue(
-            `data: ${JSON.stringify({ status: "error", code })}\n\n`
-          );
+        if (!isStreamClosed) {
+          if (code === 0) {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ status: "success" })}\n\n`)
+            );
+          } else {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ status: "error", code })}\n\n`)
+            );
+          }
+          controller.close();
+          isStreamClosed = true;
         }
-        controller.close();
       });
     },
+    cancel() {
+      // Handle stream cancellation if needed
+      console.log("Stream cancelled by client");
+    }
   });
 
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
-      Connection: "keep-alive",
+      "Connection": "keep-alive",
     },
   });
 }
