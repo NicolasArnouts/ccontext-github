@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Self-detach if not already running in background
+if [ -t 0 ]; then
+    nohup "$0" "$@" > deploy.log 2>&1 &
+    exit 0
+fi
+
+
 # Exit immediately if a command exits with a non-zero status.
 set -e
 

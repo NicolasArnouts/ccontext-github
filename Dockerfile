@@ -1,56 +1,67 @@
-# Base image for both building and running
-FROM node:20-alpine
-
-# Install system dependencies
-RUN apk add --no-cache \
-    python3 \
-    py3-pip \
-    git \
-    libc6-compat \
-    make \
-    g++ \
-    nano
-
-# Create app directory
+FROM node:22 AS builder
 WORKDIR /app
 
-# Install Python dependencies
-RUN pip install ccontext --break-system-packages
+RUN apt-get update && apt-get install -y openssl ca-certificates
 
-# Copy package files
+# 1. Copy just package*.json (for caching npm ci) + prisma
 COPY package*.json ./
-COPY prisma ./prisma/
+COPY prisma ./prisma
 
-# Copy .env file
-COPY .env ./
-
-# Install Node.js dependencies
+# 2. Install dependencies (postinstall will now succeed since prisma is present)
 RUN npm ci
 
-# Copy the rest of the application
+# 3. Copy remaining source code
 COPY . .
 
-# Generate Prisma client
+# 4. Generate Prisma client & build
 RUN npx prisma generate
-
-# Build the application
 RUN npm run build
 
-# Create a non-root user and switch to it
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
-RUN chown -R nextjs:nodejs /app
-USER nextjs
+# ---------- Final Stage ----------
+FROM node:22
+WORKDIR /app
 
-# Set up temp environments with correct permissions
-RUN mkdir -p /app/temp_environments && chown nextjs:nodejs /app/temp_environments
+RUN apt-get update && apt-get install -y \
+    python3 \
+    pipx \
+    git \
+    openssl \
+    ca-certificates \
+    nano
+
+# Copy production artifacts from builder
+COPY --from=builder /app/node_modules /app/node_modules
+COPY --from=builder /app/.next /app/.next
+COPY --from=builder /app/prisma /app/prisma
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/.env ./
+
+# --- User and Directory Setup (AS ROOT) ---
+# 1. Create the base temp directory and add the user.  adduser creates /home/nextjs
+RUN mkdir -p /app/temp_environments \
+    && addgroup --gid 1001 nodejs \
+    && adduser --uid 1001 --ingroup nodejs --disabled-password --gecos "" nextjs
+
+# 2. *NOW* create the pipx directories, *AFTER* adduser has run.
+RUN mkdir -p /home/nextjs/.local/bin \
+    && mkdir -p /home/nextjs/.local/pipx/logs \
+    && chown -R nextjs:nodejs /home/nextjs/.local \
+    && chown -R nextjs:nodejs /app \
+    && chmod -R 755 /app/temp_environments
+
+# --- Switch to nextjs user ---
+USER nextjs
+ENV HOME=/home/nextjs
+ENV PATH="$HOME/.local/bin:$PATH"
+
+# --- Install ccontext AS the nextjs user ---
+RUN pipx ensurepath
+RUN pipx install ccontext
+RUN pipx ensurepath
+
+# --- Environment Variables ---
+ENV NODE_ENV=production
 ENV TEMP_ENV_BASE_DIR=/app/temp_environments
-
-USER nextjs
-
-# Set environment variables
-ENV NODE_ENV production
-ENV PATH="/app/node_modules/.bin:$PATH"
 
 EXPOSE 3000
 

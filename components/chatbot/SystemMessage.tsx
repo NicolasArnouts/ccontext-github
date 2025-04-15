@@ -35,13 +35,13 @@ const SystemMessage: React.FC<SystemMessageProps> = ({ content }) => {
     <div className="justify-start mb-4">
       <div className="relative bg-gray-100 text-black dark:bg-gray-800 dark:text-white rounded-lg py-2 px-4">
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className="absolute top-2 right-2"
+          className="absolute top-1 right-1 bg-none p-1 outline-none"
           onClick={handleCopyToClipboard}
         >
-          <ClipboardCopy className="h-4 w-4 mr-2" />
-          {isCopied ? "Copied!" : "Copy"}
+          
+          {isCopied ?<ClipboardCopy className="h-4 w-4 p-0" /> : <ClipboardCopy className="h-4 w-4 p-0" />}
         </Button>
         <div className="overflow-x-auto pr-20">
           <MarkdownDisplay content={content} />
